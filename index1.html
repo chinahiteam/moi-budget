@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Бюджет</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --paper:#12161D; --paper-raised:#1A2029; --paper-raised-2:#212836;
+  --ink:#EDEAE0; --ink-dim:#8B93A1; --ink-faint:#565F70;
+  --amber:#E8A33D; --amber-dim:#5C4A28;
+  --green:#6FBF8B; --green-dim:#26362D;
+  --rust:#C1553C; --rust-dim:#3A2621;
+  --blue:#6C9BD1; --blue-dim:#233246;
+  --line:#2A3140; --radius:14px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:'Inter',sans-serif;}
+body{padding-bottom:84px;min-height:100vh;}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;letter-spacing:-0.01em;}
+.mono{font-family:'IBM Plex Mono',monospace;}
+button{font-family:inherit;cursor:pointer;}
+input,select{font-family:inherit;}
+::selection{background:var(--amber-dim);}
+
+.topbar{padding:22px 18px 14px;position:sticky;top:0;background:linear-gradient(var(--paper) 80%, transparent);z-index:5;}
+.topbar .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:0.12em;color:var(--ink-faint);text-transform:uppercase;}
+.topbar h1{font-size:22px;margin-top:2px;}
+
+.screen{display:none;padding:0 16px 20px;}
+.screen.active{display:block;animation:fadeIn .25s ease;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+.card{background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+.card-title{font-size:12px;text-transform:uppercase;letter-spacing:0.1em;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;margin-bottom:10px;}
+
+.hero{background:linear-gradient(160deg,var(--paper-raised),var(--paper-raised-2));border:1px solid var(--line);border-radius:18px;padding:22px 18px;margin-bottom:14px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,var(--amber-dim) 0%,transparent 70%);opacity:.5;}
+.hero .label{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.1em;}
+.hero .amount{font-family:'Space Grotesk',sans-serif;font-size:36px;font-weight:700;margin-top:6px;color:var(--ink);}
+.hero .sub{margin-top:10px;display:flex;gap:14px;font-size:12px;color:var(--ink-dim);flex-wrap:wrap;}
+.hero .sub b{color:var(--ink);font-family:'IBM Plex Mono',monospace;}
+
+.acc-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;}
+.acc-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;padding:12px 10px;}
+.acc-card .acc-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;}
+.acc-card .acc-amt{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:15px;margin-top:4px;}
+
+.pbar{height:8px;border-radius:6px;background:var(--paper-raised-2);overflow:hidden;margin-top:8px;}
+.pbar-fill{height:100%;border-radius:6px;transition:width .3s;}
+.row-between{display:flex;justify-content:space-between;align-items:baseline;}
+.cat-row{padding:10px 0;border-bottom:1px solid var(--line);}
+.cat-row:last-child{border-bottom:none;}
+.cat-name{font-size:14px;font-weight:500;}
+.cat-nums{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-dim);}
+.cat-tag{font-size:10px;font-family:'IBM Plex Mono',monospace;padding:2px 6px;border-radius:5px;margin-left:6px;}
+.tag-over{background:var(--rust-dim);color:#E8B9AC;}
+.tag-under{background:var(--green-dim);color:#B7E0C6;}
+
+.punch-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:10px;}
+.punch{aspect-ratio:1;border-radius:8px;border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-faint);}
+.punch.worked{background:var(--amber-dim);border:1px solid var(--amber);color:var(--amber);border-style:solid;font-weight:600;}
+.punch.today{outline:2px solid var(--ink);outline-offset:2px;}
+
+.btn{display:block;width:100%;padding:14px;border-radius:12px;border:none;font-weight:600;font-size:15px;text-align:center;}
+.btn-primary{background:var(--amber);color:#1A1305;}
+.btn-secondary{background:var(--paper-raised-2);color:var(--ink);border:1px solid var(--line);}
+.btn-ghost{background:transparent;color:var(--ink-dim);border:1px solid var(--line);}
+.btn-row{display:flex;gap:8px;}
+.btn-row .btn{flex:1;}
+
+.field{margin-bottom:12px;}
+.field label{display:block;font-size:12px;color:var(--ink-dim);margin-bottom:6px;font-family:'IBM Plex Mono',monospace;text-transform:uppercase;letter-spacing:.06em;}
+.field input,.field select{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--paper-raised-2);color:var(--ink);font-size:15px;}
+.field input:focus,.field select:focus{outline:2px solid var(--amber);outline-offset:1px;}
+.field-row{display:flex;gap:10px;}
+.field-row .field{flex:1;}
+.seg{display:flex;gap:8px;}
+.seg-btn{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--paper-raised-2);color:var(--ink-dim);text-align:center;font-size:14px;font-weight:500;}
+.seg-btn.active{background:var(--amber-dim);border-color:var(--amber);color:var(--amber);}
+
+.entry{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);gap:10px;}
+.entry:last-child{border-bottom:none;}
+.entry-left{min-width:0;}
+.entry-title{font-size:14px;font-weight:500;}
+.entry-sub{font-size:12px;color:var(--ink-faint);margin-top:2px;}
+.entry-amount{font-family:'IBM Plex Mono',monospace;font-weight:600;white-space:nowrap;}
+.empty{text-align:center;color:var(--ink-faint);font-size:13px;padding:24px 10px;}
+
+.tip{border-radius:10px;padding:11px 12px;font-size:13px;line-height:1.4;margin-bottom:8px;border:1px solid;}
+.tip-warn{background:var(--rust-dim);border-color:#5A3327;color:#E8B9AC;}
+.tip-ok{background:var(--green-dim);border-color:#33463C;color:#B7E0C6;}
+.tip-info{background:var(--blue-dim);border-color:#2E4360;color:#BBD3EE;}
+
+.search-box{position:relative;margin-bottom:12px;}
+.search-box input{width:100%;padding:11px 12px 11px 36px;border-radius:10px;border:1px solid var(--line);background:var(--paper-raised);color:var(--ink);font-size:14px;}
+.search-box svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:16px;height:16px;color:var(--ink-faint);}
+
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.stat-box{background:var(--paper-raised);border:1px solid var(--line);border-radius:12px;padding:12px;}
+.stat-box .stat-label{font-size:11px;color:var(--ink-faint);font-family:'IBM Plex Mono',monospace;text-transform:uppercase;}
+.stat-box .stat-val{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:16px;margin-top:4px;}
+
+.goal-card{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:10px;}
+.goal-head{display:flex;justify-content:space-between;margin-bottom:6px;}
+
+.nav{position:fixed;bottom:0;left:0;right:0;background:rgba(18,22,29,.92);backdrop-filter:blur(10px);border-top:1px solid var(--line);display:flex;padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:10;}
+.nav-btn{flex:1;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 1px;color:var(--ink-faint);font-size:9.5px;font-family:'IBM Plex Mono',monospace;letter-spacing:.01em;border-radius:10px;}
+.nav-btn.active{color:var(--amber);}
+.nav-btn svg{width:19px;height:19px;}
+
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:flex-end;z-index:20;}
+.modal-bg.active{display:flex;}
+.modal{background:var(--paper-raised);border-radius:20px 20px 0 0;padding:20px 18px calc(20px + env(safe-area-inset-bottom));width:100%;max-height:85vh;overflow-y:auto;border-top:1px solid var(--line);animation:slideUp .25s ease;}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;}
+.modal-close{background:none;border:none;color:var(--ink-dim);font-size:20px;padding:4px 8px;}
+.remove-x{background:none;border:none;color:var(--ink-faint);font-size:18px;padding:6px;}
+.add-link{background:none;border:none;color:var(--amber);font-size:13px;padding:6px 0;font-weight:600;}
+.toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:20px;font-size:13px;font-weight:600;z-index:30;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+.section-gap{height:6px;}
+
+.lock-screen{position:fixed;inset:0;background:var(--paper);z-index:50;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:24px;}
+.lock-screen.hidden{display:none;}
+.pin-dots{display:flex;gap:14px;}
+.pin-dot{width:14px;height:14px;border-radius:50%;border:1.5px solid var(--ink-faint);}
+.pin-dot.filled{background:var(--amber);border-color:var(--amber);}
+.pin-pad{display:grid;grid-template-columns:repeat(3,64px);gap:14px;}
+.pin-key{width:64px;height:64px;border-radius:50%;background:var(--paper-raised);border:1px solid var(--line);color:var(--ink);font-size:20px;font-family:'IBM Plex Mono',monospace;}
+
+.auth-box{width:100%;max-width:340px;}
+.auth-box h2{font-size:20px;margin-bottom:4px;text-align:center;}
+.auth-box .auth-sub{font-size:12px;color:var(--ink-faint);text-align:center;margin-bottom:20px;font-family:'IBM Plex Mono',monospace;}
+.auth-error{font-size:12px;color:var(--rust);margin-bottom:10px;min-height:14px;text-align:center;}
+.auth-spinner{text-align:center;color:var(--ink-faint);font-size:13px;}
+</style>
+</head>
+<body>
+
+<div class="lock-screen" id="authScreen">
+  <div class="auth-box">
+    <h2>Мій бюджет</h2>
+    <div class="auth-sub">УВІЙДИ АБО СТВОРИ АКАУНТ</div>
+    <div class="field"><label>Email</label><input type="email" id="authEmail" autocomplete="username"></div>
+    <div class="field"><label>Пароль</label><input type="password" id="authPassword" autocomplete="current-password"></div>
+    <div class="auth-error" id="authError"></div>
+    <div class="btn-row" style="margin-bottom:8px">
+      <button class="btn btn-primary" id="btnLogin">Увійти</button>
+    </div>
+    <button class="btn btn-secondary" id="btnRegister">Створити акаунт (перший раз)</button>
+  </div>
+</div>
+
+<div class="lock-screen hidden" id="lockScreen">
+  <div class="eyebrow mono" style="color:var(--ink-faint);font-size:12px;letter-spacing:.1em">ВВЕДИ PIN</div>
+  <div class="pin-dots" id="pinDots"></div>
+  <div class="pin-pad" id="pinPad"></div>
+</div>
+
+<div class="topbar">
+  <div class="eyebrow" id="dateLabel">—</div>
+  <h1 id="screenTitle">Огляд</h1>
+</div>
+
+<!-- ===== OVERVIEW ===== -->
+<div class="screen active" id="screen-overview">
+  <div class="hero">
+    <div class="label">Доступно всього</div>
+    <div class="amount mono" id="heroTotal">—</div>
+    <div class="sub">
+      <span>Зароблено цей місяць: <b id="heroEarned">—</b></span>
+      <span>Витрачено: <b id="heroSpent">—</b></span>
+    </div>
+  </div>
+
+  <div class="acc-grid">
+    <div class="acc-card"><div class="acc-label">Карта</div><div class="acc-amt" id="accCard">—</div></div>
+    <div class="acc-card"><div class="acc-label">Готівка</div><div class="acc-amt" id="accCash">—</div></div>
+    <div class="acc-card"><div class="acc-label">Накопич.</div><div class="acc-amt" id="accSavings">—</div></div>
+  </div>
+
+  <div class="card" id="tipsCard"><div class="card-title">Поради</div><div id="tipsList"></div></div>
+
+  <div class="card">
+    <div class="row-between"><div class="card-title" style="margin-bottom:0">Зміни цього місяця</div><span class="mono" style="font-size:12px;color:var(--ink-dim)" id="shiftCountLabel">0</span></div>
+    <div class="punch-grid" id="punchGrid"></div>
+    <div style="margin-top:14px"><button class="btn btn-primary" id="btnQuickShift">Записати зміну сьогодні</button></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Зарплата</div>
+    <div class="row-between"><span style="font-size:13px;color:var(--ink-dim)">База</span><span class="mono" id="shiftsBaseSum">0 ₴</span></div>
+    <div class="row-between"><span style="font-size:13px;color:var(--ink-dim)">Бонус (з ліміту <span id="bonusMaxLabel">0</span> ₴)</span><span class="mono" id="shiftsBonusSum">0 ₴</span></div>
+    <div class="pbar"><div class="pbar-fill" id="bonusBar" style="background:var(--amber);width:0%"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Історія змін</div>
+    <div id="shiftsHistory"></div>
+  </div>
+</div>
+
+<!-- ===== EXPENSES ===== -->
+<div class="screen" id="screen-expenses">
+  <button class="btn btn-primary" id="btnAddExpense" style="margin-bottom:14px">+ Витрата</button>
+
+  <div class="card">
+    <div class="card-title">Бюджет по категоріях — цей місяць</div>
+    <div id="catListFull"></div>
+  </div>
+
+  <div class="search-box">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="text" id="expenseSearch" placeholder="Пошук по витратах...">
+  </div>
+  <div class="card">
+    <div class="card-title">Останні витрати</div>
+    <div id="expenseHistory"></div>
+  </div>
+</div>
+
+<!-- ===== SAVINGS ===== -->
+<div class="screen" id="screen-savings">
+  <div class="hero">
+    <div class="label">Всього в накопиченнях</div>
+    <div class="amount mono" id="savTotal">—</div>
+    <div class="sub"><span id="savUnallocated"></span></div>
+  </div>
+  <button class="btn btn-primary" id="btnAddGoal" style="margin-bottom:14px">+ Нова ціль</button>
+  <div id="goalsList"></div>
+</div>
+
+<!-- ===== ANALYTICS ===== -->
+<div class="screen" id="screen-analytics">
+  <div class="stat-grid">
+    <div class="stat-box"><div class="stat-label">Витрачено разом</div><div class="stat-val" id="anTotal">—</div></div>
+    <div class="stat-box"><div class="stat-label">Середнє / день</div><div class="stat-val" id="anAvg">—</div></div>
+    <div class="stat-box"><div class="stat-label">Найдорожчий день</div><div class="stat-val" id="anMaxDay">—</div></div>
+    <div class="stat-box"><div class="stat-label">Проти мин. місяця</div><div class="stat-val" id="anVsLast">—</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Витрати по категоріях</div>
+    <div id="anCatList"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Найдорожчі покупки</div>
+    <div id="anTopPurchases"></div>
+  </div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div class="screen" id="screen-settings">
+  <div class="card">
+    <div class="card-title">Зарплата</div>
+    <div class="field"><label>Денна ставка, ₴</label><input type="number" id="cfgDailyRate"></div>
+    <div class="field"><label>Максимум бонусу на місяць, ₴</label><input type="number" id="cfgBonusMax"></div>
+    <div class="field-row">
+      <div class="field"><label>Число виплати 1</label><input type="number" id="cfgPayout1"></div>
+      <div class="field"><label>Число виплати 2</label><input type="number" id="cfgPayout2"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">Рахунки на старті місяця</div>
+    <div class="field"><label>Стартовий баланс картки, ₴</label><input type="number" id="cfgCardStart"></div>
+    <div class="field"><label>Готівка, ₴</label><input type="number" id="cfgCash"></div>
+    <div class="field"><label>Накопичення, $</label><input type="number" id="cfgSavingsUSD"></div>
+    <div class="field"><label>Курс $ → ₴</label><input type="number" id="cfgRate"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Категорії та бюджети</div>
+    <div id="cfgCategories"></div>
+    <button class="add-link" id="btnAddCategory">+ Додати категорію</button>
+  </div>
+  <div class="card">
+    <div class="card-title">Нагадування (оренда, підписки)</div>
+    <div id="cfgReminders"></div>
+    <button class="add-link" id="btnAddReminder">+ Додати нагадування</button>
+    <button class="btn btn-secondary" id="btnDownloadIcs" style="margin-top:10px">Завантажити нагадування (.ics)</button>
+    <div style="font-size:11px;color:var(--ink-faint);margin-top:8px;line-height:1.4">Файл імпортуй у Календар телефону — він щомісяця сам нагадає.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">PIN-код (проста заглушка від чужих очей)</div>
+    <div class="field"><label>4 цифри, або порожньо щоб вимкнути</label><input type="text" maxlength="4" inputmode="numeric" id="cfgPin"></div>
+  </div>
+  <button class="btn btn-primary" id="btnSaveSettings">Зберегти</button>
+  <div class="section-gap"></div>
+  <button class="btn btn-secondary" id="btnSignOut">Вийти з акаунту</button>
+  <div class="section-gap"></div>
+  <button class="btn btn-ghost" id="btnResetData">Скинути всі дані</button>
+</div>
+
+<div class="nav">
+  <button class="nav-btn active" data-screen="overview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>Огляд</button>
+  <button class="nav-btn" data-screen="expenses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v18M17 7c0-2-2-3-5-3s-5 1.3-5 3 2 2.7 5 3 5 1 5 3-2 3-5 3-5-1-5-3"/></svg>Витрати</button>
+  <button class="nav-btn" data-screen="savings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 10h18M6 10V6a6 6 0 0112 0v4M5 10h14l-1 10H6z"/></svg>Накопич.</button>
+  <button class="nav-btn" data-screen="analytics"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20V10M12 20V4M20 20v-7"/></svg>Аналітика</button>
+  <button class="nav-btn" data-screen="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.9l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.9-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.6 1.7 1.7 0 00-1.9.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.9 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.9l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.9.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.9-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.9V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Налашт.</button>
+</div>
+
+<!-- Modals -->
+<div class="modal-bg" id="modalShift">
+  <div class="modal">
+    <div class="modal-head"><h3>Записати зміну</h3><button class="modal-close" data-close>×</button></div>
+    <div class="field"><label>Дата</label><input type="date" id="shiftDate"></div>
+    <div class="field"><label>Бонус за зміну, ₴</label><input type="number" id="shiftBonus" value="0"></div>
+    <button class="btn btn-primary" id="saveShift">Зберегти зміну</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalExpense">
+  <div class="modal">
+    <div class="modal-head"><h3>Витрата</h3><button class="modal-close" data-close>×</button></div>
+    <div class="field"><label>Категорія</label><select id="expenseCategory"></select></div>
+    <div class="field"><label>Сума, ₴</label><input type="number" id="expenseAmount"></div>
+    <div class="field"><label>Дата</label><input type="date" id="expenseDate"></div>
+    <div class="field"><label>Спосіб оплати</label>
+      <div class="seg">
+        <button type="button" class="seg-btn active" id="segCard">Карта</button>
+        <button type="button" class="seg-btn" id="segCash">Готівка</button>
+      </div>
+    </div>
+    <div class="field"><label>Нотатка (необов'язково)</label><input type="text" id="expenseNote" placeholder="напр. Сільпо, таксі..."></div>
+    <button class="btn btn-primary" id="saveExpense">Зберегти витрату</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalGoal">
+  <div class="modal">
+    <div class="modal-head"><h3>Ціль накопичення</h3><button class="modal-close" data-close>×</button></div>
+    <div class="field"><label>На що накопичуєш</label><input type="text" id="goalName" placeholder="напр. подушка безпеки"></div>
+    <div class="field"><label>Скільки хочу накопичити, $</label><input type="number" id="goalTarget"></div>
+    <div class="field"><label>Скільки вже є, $</label><input type="number" id="goalCurrent" value="0"></div>
+    <button class="btn btn-primary" id="saveGoal">Зберегти ціль</button>
+  </div>
+</div>
+
+<div class="modal-bg" id="modalReminder">
+  <div class="modal">
+    <div class="modal-head"><h3>Нагадування</h3><button class="modal-close" data-close>×</button></div>
+    <div class="field"><label>Назва</label><input type="text" id="remLabel" placeholder="напр. Оплата за квартиру"></div>
+    <div class="field"><label>Сума, ₴ (необов'язково)</label><input type="number" id="remAmount"></div>
+    <div class="field"><label>Число місяця</label><input type="number" min="1" max="28" id="remDay"></div>
+    <button class="btn btn-primary" id="saveReminder">Зберегти нагадування</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBoOQMzdIWmjbk8HZE78HYJesVSPzg6n5A",
+  authDomain: "moi-budget-c27fd.firebaseapp.com",
+  projectId: "moi-budget-c27fd",
+  storageBucket: "moi-budget-c27fd.firebasestorage.app",
+  messagingSenderId: "954107838836",
+  appId: "1:954107838836:web:78c3c8d39452c4e602ec21"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getFirestore(fbApp);
+const auth = getAuth(fbApp);
+let docRef = null;
+
+const DEFAULT_CONFIG = {
+  dailyRate: 3000, bonusMax: 15000, payout1: 15, payout2: 29,
+  cardStart: 0, cash: 1500, savingsUSD: 500, rate: 45,
+  pin: '',
+  categories: [
+    {id:'food', name:'Їжа', budget:0},
+    {id:'transport', name:'Транспорт', budget:0},
+    {id:'housing', name:'Житло', budget:0},
+    {id:'cafe', name:'Кафе', budget:0},
+    {id:'fun', name:'Розваги', budget:0},
+    {id:'clothes', name:'Одяг', budget:0},
+    {id:'subs', name:'Підписки', budget:0},
+    {id:'help', name:'Допомога усім', budget:0},
+  ],
+  reminders: []
+};
+
+let state = { config: null, shifts: [], expenses: [], goals: [] };
+let selectedAccount = 'card';
+let uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+let todayStr = () => new Date().toISOString().slice(0,10);
+let fmt = n => (Math.round(n*100)/100).toLocaleString('uk-UA');
+
+async function loadState(){
+  let data = {};
+  try{
+    const snap = await getDoc(docRef);
+    if(snap.exists()) data = snap.data();
+  }catch(e){ showToast('Не вдалося завантажити дані — перевір інтернет'); }
+  state.config = data.config ? {...DEFAULT_CONFIG, ...data.config} : {...DEFAULT_CONFIG};
+  if(!state.config.reminders) state.config.reminders = [];
+  if(!state.config.categories || !state.config.categories.length) state.config.categories = [...DEFAULT_CONFIG.categories];
+  state.shifts = data.shifts || [];
+  state.expenses = data.expenses || [];
+  state.goals = data.goals || [];
+}
+async function save(key){
+  try{ await setDoc(docRef, {[key]: state[key]}, {merge:true}); }
+  catch(e){ showToast('Помилка збереження — перевір інтернет'); }
+}
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800); }
+
+// ---------- auth ----------
+function setAuthError(msg){ document.getElementById('authError').textContent = msg; }
+function translateAuthError(code){
+  const map = {
+    'auth/invalid-email':'Невірний формат email',
+    'auth/user-not-found':'Такого акаунту не існує — тисни "Створити акаунт"',
+    'auth/wrong-password':'Невірний пароль',
+    'auth/invalid-credential':'Невірний email або пароль',
+    'auth/email-already-in-use':'Акаунт з таким email вже існує — тисни "Увійти"',
+    'auth/weak-password':'Пароль має бути мінімум 6 символів',
+  };
+  return map[code] || 'Помилка: '+code;
+}
+document.getElementById('btnLogin').addEventListener('click', async ()=>{
+  setAuthError('');
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  if(!email || !pass){ setAuthError('Заповни email і пароль'); return; }
+  try{ await signInWithEmailAndPassword(auth, email, pass); }
+  catch(e){ setAuthError(translateAuthError(e.code)); }
+});
+document.getElementById('btnRegister').addEventListener('click', async ()=>{
+  setAuthError('');
+  const email = document.getElementById('authEmail').value.trim();
+  const pass = document.getElementById('authPassword').value;
+  if(!email || !pass){ setAuthError('Заповни email і пароль'); return; }
+  try{ await createUserWithEmailAndPassword(auth, email, pass); }
+  catch(e){ setAuthError(translateAuthError(e.code)); }
+});
+document.getElementById('btnSignOut').addEventListener('click', async ()=>{
+  if(!confirm('Вийти з акаунту?')) return;
+  await signOut(auth);
+});
+onAuthStateChanged(auth, async (user)=>{
+  if(user){
+    docRef = doc(db, 'users', user.uid, 'budgetApp', 'data');
+    document.getElementById('authScreen').classList.add('hidden');
+    await loadState();
+    if(state.config.pin && state.config.pin.length===4){
+      document.getElementById('lockScreen').classList.remove('hidden');
+      renderPinPad(); renderPinDots();
+    }
+    populateCategorySelect();
+    renderAll();
+  } else {
+    document.getElementById('authScreen').classList.remove('hidden');
+    document.getElementById('lockScreen').classList.add('hidden');
+  }
+});
+
+// ---------- nav ----------
+document.querySelectorAll('.nav-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('screen-'+btn.dataset.screen).classList.add('active');
+    const titles = {overview:'Огляд', expenses:'Витрати', savings:'Накопичення', analytics:'Аналітика', settings:'Налаштування'};
+    document.getElementById('screenTitle').textContent = titles[btn.dataset.screen];
+  });
+});
+function openModal(id){ document.getElementById(id).classList.add('active'); }
+function closeModal(id){ document.getElementById(id).classList.remove('active'); }
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click', e=>e.target.closest('.modal-bg').classList.remove('active')));
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('active'); }));
+
+// ---------- scope helpers ----------
+function isInMonth(dateStr, year, month){ const d=new Date(dateStr+'T00:00:00'); return d.getFullYear()===year && d.getMonth()===month; }
+function isThisMonth(dateStr){ const now=new Date(); return isInMonth(dateStr, now.getFullYear(), now.getMonth()); }
+function isLastMonth(dateStr){ const now=new Date(); const lm=new Date(now.getFullYear(), now.getMonth()-1, 1); return isInMonth(dateStr, lm.getFullYear(), lm.getMonth()); }
+function monthShifts(){ return state.shifts.filter(s=>isThisMonth(s.date)); }
+function monthExpenses(){ return state.expenses.filter(e=>isThisMonth(e.date)); }
+function lastMonthExpenses(){ return state.expenses.filter(e=>isLastMonth(e.date)); }
+
+function categorySpent(catId, list){ return (list||monthExpenses()).filter(e=>e.category===catId).reduce((a,e)=>a+Number(e.amount),0); }
+
+function computeEarned(){
+  const cfg = state.config, shifts = monthShifts();
+  const base = shifts.length * Number(cfg.dailyRate);
+  let bonus = Math.min(shifts.reduce((a,s)=>a+Number(s.bonus||0),0), Number(cfg.bonusMax));
+  return {base, bonus, total: base+bonus, days: shifts.length};
+}
+
+function computeAccounts(){
+  const cfg = state.config;
+  const earned = computeEarned();
+  const cardSpent = monthExpenses().filter(e=>e.account==='card').reduce((a,e)=>a+Number(e.amount),0);
+  const cashSpent = monthExpenses().filter(e=>e.account==='cash').reduce((a,e)=>a+Number(e.amount),0);
+  const cardBalance = Number(cfg.cardStart) + earned.total - cardSpent;
+  const cashBalance = Number(cfg.cash) - cashSpent;
+  const allocated = state.goals.reduce((a,g)=>a+Number(g.current),0);
+  const savingsTotalUSD = Math.max(Number(cfg.savingsUSD), allocated);
+  const savingsUAH = savingsTotalUSD * Number(cfg.rate);
+  return {cardBalance, cashBalance, savingsTotalUSD, savingsUAH, earned, cardSpent, cashSpent};
+}
+
+// ---------- render overview ----------
+function renderOverview(){
+  const acc = computeAccounts();
+  const spent = acc.cardSpent + acc.cashSpent;
+  const total = acc.cardBalance + acc.cashBalance + acc.savingsUAH;
+  document.getElementById('heroTotal').textContent = fmt(total)+' ₴';
+  document.getElementById('heroEarned').textContent = fmt(acc.earned.total)+' ₴';
+  document.getElementById('heroSpent').textContent = fmt(spent)+' ₴';
+  document.getElementById('accCard').textContent = fmt(acc.cardBalance)+' ₴';
+  document.getElementById('accCash').textContent = fmt(acc.cashBalance)+' ₴';
+  document.getElementById('accSavings').textContent = '$'+fmt(acc.savingsTotalUSD);
+
+  const tips = [];
+  const now = new Date(); const dayOfMonth = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  const paceRatio = dayOfMonth/daysInMonth;
+  let totalBudget = 0;
+  state.config.categories.forEach(cat=>{
+    totalBudget += Number(cat.budget)||0;
+    if(!cat.budget) return;
+    const sp = categorySpent(cat.id);
+    const expected = cat.budget * paceRatio;
+    if(sp > cat.budget) tips.push({t:'warn', text:`«${cat.name}»: перевищено бюджет на ${fmt(sp-cat.budget)} ₴.`});
+    else if(sp > expected*1.3 && sp>50) tips.push({t:'warn', text:`«${cat.name}»: темп витрат вищий за план (${fmt(sp)} з очікуваних ~${fmt(expected)} ₴ на сьогодні).`});
+    else if(sp < expected*0.6 && dayOfMonth>10) tips.push({t:'ok', text:`«${cat.name}»: економиш — витрачено лише ${fmt(sp)} з ${fmt(cat.budget)} ₴.`});
+  });
+  if(totalBudget>0 && spent>=totalBudget) tips.unshift({t:'warn', text:`Загальний місячний бюджет (${fmt(totalBudget)} ₴) вже досягнуто.`});
+  const tipsList = document.getElementById('tipsList');
+  tipsList.innerHTML = tips.length ? tips.map(t=>`<div class="tip ${t.t==='warn'?'tip-warn':'tip-ok'}">${t.text}</div>`).join('') : `<div class="tip tip-ok">Все в межах плану.</div>`;
+
+  const p1=Number(state.config.payout1), p2=Number(state.config.payout2);
+  let rs,re;
+  if(dayOfMonth<=p1){rs=1;re=p1;} else if(dayOfMonth<=p2){rs=p1+1;re=p2;} else {rs=p2+1;re=daysInMonth;}
+  const workedDates = new Set(monthShifts().map(s=>s.date));
+  let grid='';
+  for(let d=rs; d<=re; d++){
+    const ds = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    grid += `<div class="punch ${workedDates.has(ds)?'worked':''} ${d===dayOfMonth?'today':''}">${workedDates.has(ds)?'✓':d}</div>`;
+  }
+  document.getElementById('punchGrid').innerHTML = grid;
+  document.getElementById('shiftCountLabel').textContent = monthShifts().length + ' змін';
+
+  document.getElementById('shiftsBaseSum').textContent = fmt(acc.earned.base)+' ₴';
+  document.getElementById('shiftsBonusSum').textContent = fmt(acc.earned.bonus)+' ₴';
+  document.getElementById('bonusMaxLabel').textContent = fmt(state.config.bonusMax);
+  document.getElementById('bonusBar').style.width = Math.min(100,(acc.earned.bonus/Number(state.config.bonusMax))*100)+'%';
+
+  const hist = document.getElementById('shiftsHistory');
+  const sorted = [...state.shifts].sort((a,b)=>b.date.localeCompare(a.date));
+  hist.innerHTML = sorted.length ? sorted.slice(0,30).map(s=>`
+    <div class="entry"><div class="entry-left"><div class="entry-title">${s.date}</div><div class="entry-sub">Ставка ${fmt(state.config.dailyRate)} ₴ ${s.bonus?('+ бонус '+fmt(s.bonus)+' ₴'):''}</div></div>
+    <div class="entry-amount">${fmt(Number(state.config.dailyRate)+Number(s.bonus||0))} ₴</div></div>`).join('') : '<div class="empty">Ще немає записаних змін</div>';
+}
+
+function renderCatList(elId, list){
+  const el = document.getElementById(elId);
+  const src = list || monthExpenses();
+  const totalSpent = src.reduce((a,e)=>a+Number(e.amount),0);
+  if(!state.config.categories.length){ el.innerHTML='<div class="empty">Категорій ще немає</div>'; return; }
+  el.innerHTML = state.config.categories.map(cat=>{
+    const spent = categorySpent(cat.id, src);
+    const budget = Number(cat.budget)||0;
+    const pct = budget>0 ? Math.min(100,(spent/budget)*100) : (spent>0?100:0);
+    const over = budget>0 && spent>budget;
+    const share = totalSpent>0 ? Math.round((spent/totalSpent)*100) : 0;
+    const color = over ? 'var(--rust)' : (pct>80?'var(--amber)':'var(--green)');
+    const tag = budget>0 ? (over ? `<span class="cat-tag tag-over">−${fmt(spent-budget)} ₴</span>` : `<span class="cat-tag tag-under">залишок ${fmt(budget-spent)} ₴</span>`) : '';
+    return `<div class="cat-row"><div class="row-between"><span class="cat-name">${cat.name}${tag}</span><span class="cat-nums">${fmt(spent)} / ${budget?fmt(budget):'—'} ₴ · ${share}%</span></div>
+    <div class="pbar"><div class="pbar-fill" style="width:${pct}%;background:${color}"></div></div></div>`;
+  }).join('');
+}
+
+// ---------- expenses screen ----------
+function populateCategorySelect(){
+  document.getElementById('expenseCategory').innerHTML = state.config.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+}
+function renderExpenses(){
+  renderCatList('catListFull');
+  renderExpenseHistory();
+}
+function renderExpenseHistory(){
+  const q = (document.getElementById('expenseSearch').value||'').toLowerCase().trim();
+  const hist = document.getElementById('expenseHistory');
+  let sorted = [...state.expenses].sort((a,b)=>b.date.localeCompare(a.date));
+  if(q){
+    sorted = sorted.filter(ex=>{
+      const cat = state.config.categories.find(c=>c.id===ex.category);
+      return (cat&&cat.name.toLowerCase().includes(q)) || (ex.note||'').toLowerCase().includes(q) || String(ex.amount).includes(q) || (ex.account==='card'?'карта':'готівка').includes(q);
+    });
+  }
+  hist.innerHTML = sorted.length ? sorted.slice(0,100).map(ex=>{
+    const cat = state.config.categories.find(c=>c.id===ex.category);
+    return `<div class="entry"><div class="entry-left"><div class="entry-title">${cat?cat.name:'Категорія'}</div>
+    <div class="entry-sub">${ex.date} · ${ex.account==='card'?'карта':'готівка'}${ex.note?' · '+ex.note:''}</div></div>
+    <div class="entry-amount">${fmt(ex.amount)} ₴</div></div>`;
+  }).join('') : '<div class="empty">Нічого не знайдено</div>';
+}
+document.getElementById('expenseSearch').addEventListener('input', renderExpenseHistory);
+
+// ---------- savings screen ----------
+function renderSavings(){
+  const acc = computeAccounts();
+  document.getElementById('savTotal').textContent = '$'+fmt(acc.savingsTotalUSD)+' ('+fmt(acc.savingsUAH)+' ₴)';
+  const allocated = state.goals.reduce((a,g)=>a+Number(g.current),0);
+  const unalloc = Math.max(0, Number(state.config.savingsUSD) - allocated);
+  document.getElementById('savUnallocated').textContent = unalloc>0 ? `Нерозподілено: $${fmt(unalloc)}` : '';
+
+  const list = document.getElementById('goalsList');
+  if(!state.goals.length){ list.innerHTML = '<div class="empty">Ще немає цілей накопичення</div>'; return; }
+  list.innerHTML = state.goals.map(g=>{
+    const pct = g.target>0 ? Math.min(100,(g.current/g.target)*100) : 0;
+    return `<div class="goal-card">
+      <div class="goal-head"><span style="font-weight:600;font-size:14px">${g.name}</span><span class="mono" style="font-size:13px;color:var(--ink-dim)">$${fmt(g.current)} / $${fmt(g.target)}</span></div>
+      <div class="pbar"><div class="pbar-fill" style="width:${pct}%;background:var(--green)"></div></div>
+      <div style="display:flex;justify-content:flex-end;margin-top:8px"><button class="btn btn-ghost" style="width:auto;padding:6px 12px;font-size:12px" data-id="${g.id}" data-role="del-goal">Видалити</button></div>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('[data-role="del-goal"]').forEach(b=>b.addEventListener('click', async ()=>{
+    state.goals = state.goals.filter(g=>g.id!==b.dataset.id);
+    await save('goals'); renderSavings();
+  }));
+}
+document.getElementById('btnAddGoal').addEventListener('click', ()=>{
+  document.getElementById('goalName').value=''; document.getElementById('goalTarget').value=''; document.getElementById('goalCurrent').value=0;
+  openModal('modalGoal');
+});
+document.getElementById('saveGoal').addEventListener('click', async ()=>{
+  const name = document.getElementById('goalName').value.trim();
+  const target = Number(document.getElementById('goalTarget').value);
+  const current = Number(document.getElementById('goalCurrent').value)||0;
+  if(!name || !target){ showToast('Заповни назву і суму цілі'); return; }
+  state.goals.push({id:uid(), name, target, current});
+  await save('goals'); closeModal('modalGoal'); renderSavings(); showToast('Ціль додано');
+});
+
+// ---------- analytics ----------
+function renderAnalytics(){
+  const cur = monthExpenses();
+  const last = lastMonthExpenses();
+  const totalCur = cur.reduce((a,e)=>a+Number(e.amount),0);
+  const totalLast = last.reduce((a,e)=>a+Number(e.amount),0);
+  const now = new Date();
+  document.getElementById('anTotal').textContent = fmt(totalCur)+' ₴';
+  document.getElementById('anAvg').textContent = fmt(totalCur/now.getDate())+' ₴';
+
+  const byDay = {};
+  cur.forEach(e=>{ byDay[e.date] = (byDay[e.date]||0) + Number(e.amount); });
+  let maxDay = null, maxVal = 0;
+  Object.entries(byDay).forEach(([d,v])=>{ if(v>maxVal){maxVal=v;maxDay=d;} });
+  document.getElementById('anMaxDay').textContent = maxDay ? (maxDay.slice(8,10)+'.'+maxDay.slice(5,7)+' — '+fmt(maxVal)+' ₴') : '—';
+
+  const diff = totalLast>0 ? Math.round(((totalCur-totalLast)/totalLast)*100) : null;
+  const vsLastEl = document.getElementById('anVsLast');
+  if(diff===null){ vsLastEl.textContent = 'немає даних'; vsLastEl.style.color='var(--ink-dim)'; }
+  else { vsLastEl.textContent = (diff>0?'+':'')+diff+'%'; vsLastEl.style.color = diff>0 ? 'var(--rust)' : 'var(--green)'; }
+
+  renderCatList('anCatList', cur);
+
+  const top = [...cur].sort((a,b)=>b.amount-a.amount).slice(0,5);
+  const topEl = document.getElementById('anTopPurchases');
+  topEl.innerHTML = top.length ? top.map(ex=>{
+    const cat = state.config.categories.find(c=>c.id===ex.category);
+    return `<div class="entry"><div class="entry-left"><div class="entry-title">${cat?cat.name:'—'}</div><div class="entry-sub">${ex.date}${ex.note?' · '+ex.note:''}</div></div><div class="entry-amount">${fmt(ex.amount)} ₴</div></div>`;
+  }).join('') : '<div class="empty">Ще немає витрат цього місяця</div>';
+}
+
+// ---------- settings ----------
+function renderSettings(){
+  const c = state.config;
+  document.getElementById('cfgDailyRate').value = c.dailyRate;
+  document.getElementById('cfgBonusMax').value = c.bonusMax;
+  document.getElementById('cfgPayout1').value = c.payout1;
+  document.getElementById('cfgPayout2').value = c.payout2;
+  document.getElementById('cfgCardStart').value = c.cardStart;
+  document.getElementById('cfgCash').value = c.cash;
+  document.getElementById('cfgSavingsUSD').value = c.savingsUSD;
+  document.getElementById('cfgRate').value = c.rate;
+  document.getElementById('cfgPin').value = c.pin || '';
+  renderCategoryEditor();
+  renderReminderEditor();
+}
+function renderCategoryEditor(){
+  const el = document.getElementById('cfgCategories');
+  el.innerHTML = state.config.categories.map((cat,i)=>`
+    <div class="field-row" style="align-items:flex-end;margin-bottom:10px">
+      <div class="field" style="margin-bottom:0"><label>Назва</label><input type="text" data-idx="${i}" class="cat-name-input" value="${cat.name}"></div>
+      <div class="field" style="margin-bottom:0;max-width:110px"><label>Бюджет ₴</label><input type="number" data-idx="${i}" class="cat-budget-input" value="${cat.budget}"></div>
+      <button class="remove-x" data-idx="${i}" data-role="remove-cat">×</button>
+    </div>`).join('');
+  el.querySelectorAll('[data-role="remove-cat"]').forEach(b=>b.addEventListener('click', ()=>{ state.config.categories.splice(Number(b.dataset.idx),1); renderCategoryEditor(); }));
+}
+document.getElementById('btnAddCategory').addEventListener('click', ()=>{ state.config.categories.push({id:uid(), name:'Нова категорія', budget:0}); renderCategoryEditor(); });
+
+function renderReminderEditor(){
+  const el = document.getElementById('cfgReminders');
+  if(!state.config.reminders.length){ el.innerHTML = '<div class="empty" style="padding:10px 0">Ще немає нагадувань</div>'; return; }
+  el.innerHTML = state.config.reminders.map((r,i)=>`
+    <div class="entry"><div class="entry-left"><div class="entry-title">${r.label}</div><div class="entry-sub">${r.day} числа${r.amount?' · '+fmt(r.amount)+' ₴':''}</div></div>
+    <button class="remove-x" data-idx="${i}" data-role="remove-rem">×</button></div>`).join('');
+  el.querySelectorAll('[data-role="remove-rem"]').forEach(b=>b.addEventListener('click', async ()=>{ state.config.reminders.splice(Number(b.dataset.idx),1); await save('config'); renderReminderEditor(); }));
+}
+document.getElementById('btnAddReminder').addEventListener('click', ()=>{
+  document.getElementById('remLabel').value=''; document.getElementById('remAmount').value=''; document.getElementById('remDay').value='';
+  openModal('modalReminder');
+});
+document.getElementById('saveReminder').addEventListener('click', async ()=>{
+  const label = document.getElementById('remLabel').value.trim();
+  const day = Number(document.getElementById('remDay').value);
+  const amount = Number(document.getElementById('remAmount').value)||0;
+  if(!label || !day){ showToast('Заповни назву і число'); return; }
+  state.config.reminders.push({id:uid(), label, day, amount});
+  await save('config'); closeModal('modalReminder'); renderReminderEditor(); showToast('Нагадування додано');
+});
+document.getElementById('btnDownloadIcs').addEventListener('click', ()=>{
+  if(!state.config.reminders.length){ showToast('Спочатку додай нагадування'); return; }
+  const now = new Date();
+  let ics = 'BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Budget App//UA\r\n';
+  state.config.reminders.forEach(r=>{
+    let m = now.getMonth(), y = now.getFullYear();
+    if(now.getDate() > r.day){ m += 1; if(m>11){m=0;y+=1;} }
+    const dd = String(r.day).padStart(2,'0'), mm = String(m+1).padStart(2,'0');
+    const dtstart = `${y}${mm}${dd}T090000`;
+    ics += `BEGIN:VEVENT\r\nUID:${uid()}@budgetapp\r\nDTSTART:${dtstart}\r\nRRULE:FREQ=MONTHLY\r\nSUMMARY:${r.label}${r.amount?' — '+fmt(r.amount)+' грн':''}\r\nBEGIN:VALARM\r\nACTION:DISPLAY\r\nDESCRIPTION:${r.label}\r\nTRIGGER:-PT0M\r\nEND:VALARM\r\nEND:VEVENT\r\n`;
+  });
+  ics += 'END:VCALENDAR';
+  const link = document.createElement('a');
+  link.href = 'data:text/calendar;charset=utf-8,'+encodeURIComponent(ics);
+  link.download = 'budget-reminders.ics';
+  document.body.appendChild(link); link.click(); document.body.removeChild(link);
+});
+document.getElementById('btnSaveSettings').addEventListener('click', async ()=>{
+  const c = state.config;
+  c.dailyRate = Number(document.getElementById('cfgDailyRate').value)||0;
+  c.bonusMax = Number(document.getElementById('cfgBonusMax').value)||0;
+  c.payout1 = Number(document.getElementById('cfgPayout1').value)||15;
+  c.payout2 = Number(document.getElementById('cfgPayout2').value)||29;
+  c.cardStart = Number(document.getElementById('cfgCardStart').value)||0;
+  c.cash = Number(document.getElementById('cfgCash').value)||0;
+  c.savingsUSD = Number(document.getElementById('cfgSavingsUSD').value)||0;
+  c.rate = Number(document.getElementById('cfgRate').value)||0;
+  c.pin = document.getElementById('cfgPin').value.replace(/\D/g,'').slice(0,4);
+  document.querySelectorAll('.cat-name-input').forEach(inp=>{ c.categories[Number(inp.dataset.idx)].name = inp.value; });
+  document.querySelectorAll('.cat-budget-input').forEach(inp=>{ c.categories[Number(inp.dataset.idx)].budget = Number(inp.value)||0; });
+  await save('config');
+  showToast('Збережено');
+  renderAll();
+});
+document.getElementById('btnResetData').addEventListener('click', async ()=>{
+  if(!confirm('Точно скинути всі дані застосунку?')) return;
+  state = {config:{...DEFAULT_CONFIG}, shifts:[], expenses:[], goals:[]};
+  await save('config'); await save('shifts'); await save('expenses'); await save('goals');
+  renderAll(); showToast('Дані скинуто');
+});
+
+// ---------- shift modal ----------
+function openShiftModal(){ document.getElementById('shiftDate').value = todayStr(); document.getElementById('shiftBonus').value = 0; openModal('modalShift'); }
+document.getElementById('btnQuickShift').addEventListener('click', openShiftModal);
+document.getElementById('saveShift').addEventListener('click', async ()=>{
+  const date = document.getElementById('shiftDate').value || todayStr();
+  const bonus = Number(document.getElementById('shiftBonus').value)||0;
+  const idx = state.shifts.findIndex(s=>s.date===date);
+  if(idx>=0) state.shifts[idx].bonus = bonus; else state.shifts.push({date,bonus});
+  await save('shifts'); closeModal('modalShift'); showToast('Зміну записано'); renderAll();
+});
+
+// ---------- expense modal ----------
+document.getElementById('btnAddExpense').addEventListener('click', ()=>{
+  populateCategorySelect();
+  document.getElementById('expenseDate').value = todayStr();
+  document.getElementById('expenseAmount').value = '';
+  document.getElementById('expenseNote').value = '';
+  selectedAccount = 'card';
+  document.getElementById('segCard').classList.add('active');
+  document.getElementById('segCash').classList.remove('active');
+  openModal('modalExpense');
+});
+document.getElementById('segCard').addEventListener('click', ()=>{ selectedAccount='card'; document.getElementById('segCard').classList.add('active'); document.getElementById('segCash').classList.remove('active'); });
+document.getElementById('segCash').addEventListener('click', ()=>{ selectedAccount='cash'; document.getElementById('segCash').classList.add('active'); document.getElementById('segCard').classList.remove('active'); });
+document.getElementById('saveExpense').addEventListener('click', async ()=>{
+  const amount = Number(document.getElementById('expenseAmount').value);
+  if(!amount || amount<=0){ showToast('Вкажи суму'); return; }
+  state.expenses.push({ id:uid(), category:document.getElementById('expenseCategory').value, amount, date:document.getElementById('expenseDate').value||todayStr(), account:selectedAccount, note:document.getElementById('expenseNote').value.trim() });
+  await save('expenses'); closeModal('modalExpense'); showToast('Витрату додано'); renderAll();
+});
+
+// ---------- PIN lock ----------
+let pinBuffer = '';
+function renderPinPad(){
+  const keys = ['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  document.getElementById('pinPad').innerHTML = keys.map(k=>k===''?'<div></div>':`<button class="pin-key" data-k="${k}">${k}</button>`).join('');
+  document.getElementById('pinPad').querySelectorAll('.pin-key').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      if(b.dataset.k==='⌫'){ pinBuffer = pinBuffer.slice(0,-1); }
+      else if(pinBuffer.length<4){ pinBuffer += b.dataset.k; }
+      renderPinDots();
+      if(pinBuffer.length===4){
+        if(pinBuffer === state.config.pin){ document.getElementById('lockScreen').classList.add('hidden'); pinBuffer=''; renderPinDots(); }
+        else { setTimeout(()=>{ pinBuffer=''; renderPinDots(); showToast('Невірний PIN'); }, 200); }
+      }
+    });
+  });
+}
+function renderPinDots(){
+  document.getElementById('pinDots').innerHTML = [0,1,2,3].map(i=>`<div class="pin-dot ${i<pinBuffer.length?'filled':''}"></div>`).join('');
+}
+
+// ---------- init ----------
+function renderAll(){ renderOverview(); renderExpenses(); renderSavings(); renderAnalytics(); renderSettings(); }
+const now0 = new Date();
+const months0 = ['СІЧНЯ','ЛЮТОГО','БЕРЕЗНЯ','КВІТНЯ','ТРАВНЯ','ЧЕРВНЯ','ЛИПНЯ','СЕРПНЯ','ВЕРЕСНЯ','ЖОВТНЯ','ЛИСТОПАДА','ГРУДНЯ'];
+document.getElementById('dateLabel').textContent = `${now0.getDate()} ${months0[now0.getMonth()]} ${now0.getFullYear()}`;
+</script>
+</body>
+</html>
