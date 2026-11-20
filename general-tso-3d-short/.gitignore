@@ -1,0 +1,14 @@
+node_modules/
+out/
+src/generated/
+.remotion/
+
+# Згенеровані сцени, озвучка і музика — важкі медіафайли, зберігайте окремо
+public/scenes/*
+public/audio/*
+!public/scenes/.gitkeep
+!public/audio/.gitkeep
+
+# Фото реальної людини не комітимо
+characters/reference/*
+!characters/reference/.gitkeep
