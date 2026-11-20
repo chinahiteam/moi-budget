@@ -1,6 +1,6 @@
 import React from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { COLORS, SAFE_WIDTH } from "../theme";
+import { COLORS, SAFE_WIDTH, SPRING } from "../theme";
 import { TITLE_FONT } from "../fonts";
 import type { Scene } from "../timeline";
 
@@ -10,7 +10,7 @@ const shadow = "0 4px 0 rgba(0,0,0,0.55), 0 10px 28px rgba(0,0,0,0.55)";
 const usePop = (delay: number) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  return spring({ frame: frame - delay, fps, config: { damping: 13, stiffness: 190, mass: 0.7 } });
+  return spring({ frame: frame - delay, fps, config: SPRING.snappy });
 };
 
 const Badge: React.FC<{ text: string; delay: number; background: string; color: string }> = ({ text, delay, background, color }) => {
@@ -66,7 +66,7 @@ const HeroTitle: React.FC<{ text: string }> = ({ text }) => {
           <div key={lineIndex} style={{ display: "flex", columnGap: fontSize * 0.26, whiteSpace: "nowrap" }}>
             {line.map((word) => {
               const i = wordIndex++;
-              const pop = spring({ frame: frame - 2 - i * 4, fps, config: { damping: 12, stiffness: 210, mass: 0.6 } });
+              const pop = spring({ frame: frame - 2 - i * 4, fps, config: SPRING.snappy });
               return (
                 <span
                   key={i}

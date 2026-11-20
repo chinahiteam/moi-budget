@@ -15,6 +15,9 @@ Config.setVideoImageFormat("jpeg");
 Config.setJpegQuality(95);
 Config.setOverwriteOutput(true);
 
+// 3D-сцени малюються через WebGL: ANGLE працює і з відеокартою, і з програмним рендером.
+Config.setChromiumOpenGlRenderer("angle");
+
 // За замовчуванням Remotion сам завантажує Chrome Headless Shell. У середовищах без доступу
 // до завантаження вкажіть власний бінарник: REMOTION_BROWSER_EXECUTABLE=/шлях/до/chrome-headless-shell
 if (process.env.REMOTION_BROWSER_EXECUTABLE) {

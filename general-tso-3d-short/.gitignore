@@ -5,9 +5,8 @@ src/generated/
 
 # Згенеровані сцени, озвучка і музика — важкі медіафайли, зберігайте окремо
 public/scenes/*
-public/audio/*
+# (озвучку, музику й ефекти з tools/ зберігаємо в репозиторії, щоб рендер працював одразу)
 !public/scenes/.gitkeep
-!public/audio/.gitkeep
 
 # Фото реальної людини не комітимо
 characters/reference/*

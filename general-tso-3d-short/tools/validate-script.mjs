@@ -57,6 +57,11 @@ for (const scene of scenes) {
   const norm = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   check(norm(scene.subtitles.map((s) => s.text).join(" ")) === norm(scene.voiceover), `${tag}: текст субтитрів не збігається з текстом озвучки`);
 
+  // Текст для синтезатора (з наголосами) має бути тим самим текстом, що й озвучка.
+  if (scene.voiceover_tts) {
+    check(norm(scene.voiceover_tts.replace(/\u0301/g, "")) === norm(scene.voiceover), `${tag}: voiceover_tts відрізняється від voiceover`);
+  }
+
   for (const chip of scene.ingredient_chips) {
     check(chip.at_sec >= scene.start_sec && chip.at_sec < scene.end_sec, `${tag}: плашка «${chip.text}» з'являється поза сценою`);
   }

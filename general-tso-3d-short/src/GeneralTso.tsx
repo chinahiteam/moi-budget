@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import { AbsoluteFill, Html5Audio, Sequence, continueRender, delayRender, interpolate, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { loadFonts } from "./fonts";
 import { BANDS, COLORS } from "./theme";
-import { music, musicVolume, scenes, voiceoverFull } from "./timeline";
+import { music, musicVolume, scenes, sfx, voiceoverFull } from "./timeline";
+import { Grade, Grain, SceneText, Vignette } from "./components/Finish";
 import { IngredientChips } from "./components/IngredientChips";
 import { KineticSubtitles } from "./components/KineticSubtitles";
 import { Band, SafeZoneGuides } from "./components/SafeZone";
 import { ShotLayer } from "./components/SceneVideo";
 import { TitlePlate } from "./components/TitlePlate";
+import { Scene3D } from "./three/Scene3D";
 
 export type GeneralTsoProps = {
   // Показати межі безпечної зони та смуг верстки (для перевірки, не для публікації).
@@ -43,39 +45,49 @@ export const GeneralTso: React.FC<GeneralTsoProps> = ({ showSafeZone }) => {
     loadFonts().then(() => continueRender(fontHandle));
   }, [fontHandle]);
 
+  const shots = scenes.flatMap((scene) => scene.shots);
+
   return (
     <AbsoluteFill style={{ backgroundColor: COLORS.ink }}>
-      {/* 1. Відеосцени */}
+      {/* 1. 3D-сцени, зібрані в коді (Three.js) — для планів, де немає готового кліпу */}
+      <Scene3D shots={shots.filter((shot) => !shot.media)} />
+
+      {/* 2. Готові відеокліпи з public/scenes/ мають пріоритет над 3D */}
       {scenes.flatMap((scene) =>
-        scene.shots.map((shot) => (
-          <Sequence key={shot.id} from={shot.from} durationInFrames={shot.durationInFrames} name={`Відео · ${shot.id}`}>
-            <ShotLayer scene={scene} shot={shot} />
-          </Sequence>
-        )),
+        scene.shots
+          .filter((shot) => shot.media)
+          .map((shot) => (
+            <Sequence key={shot.id} from={shot.from} durationInFrames={shot.durationInFrames} name={`Відео · ${shot.id}`}>
+              <ShotLayer shot={shot} />
+            </Sequence>
+          )),
       )}
 
       <Scrims />
 
-      {/* 2. Заголовки і плашки інгредієнтів — у верхніх смугах безпечної зони */}
+      {/* 3. Заголовки і плашки інгредієнтів — у верхніх смугах безпечної зони */}
       {scenes.map((scene) => (
         <Sequence key={scene.id} from={scene.from} durationInFrames={scene.durationInFrames} name={`Текст · ${scene.id}`}>
-          <Band band={scene.titleStyle === "hero" ? { y_min: BANDS.title.y_min, y_max: BANDS.ingredient_chips.y_max } : BANDS.title}>
-            <TitlePlate scene={scene} />
-          </Band>
-          {scene.chips.length ? (
-            <Band band={BANDS.ingredient_chips}>
-              <IngredientChips scene={scene} />
+          {/* Останній титр лишається до кінця ролика, решта швидко виходять перед склейкою */}
+          <SceneText durationInFrames={scene.durationInFrames} exit={scene.titleStyle !== "outro"}>
+            <Band band={scene.titleStyle === "hero" ? { y_min: BANDS.title.y_min, y_max: BANDS.ingredient_chips.y_max } : BANDS.title}>
+              <TitlePlate scene={scene} />
             </Band>
-          ) : null}
+            {scene.chips.length ? (
+              <Band band={BANDS.ingredient_chips}>
+                <IngredientChips scene={scene} />
+              </Band>
+            ) : null}
+          </SceneText>
         </Sequence>
       ))}
 
-      {/* 3. Кінетичні субтитри — у нижній смузі безпечної зони */}
+      {/* 4. Кінетичні субтитри — у нижній смузі безпечної зони */}
       <Band band={BANDS.subtitles} align="end">
         <KineticSubtitles chunks={scenes.flatMap((scene) => scene.subtitles)} />
       </Band>
 
-      {/* 4. Звук: або одна доріжка на весь ролик, або по файлу на сцену */}
+      {/* 5. Звук: або одна доріжка на весь ролик, або по файлу на сцену */}
       {voiceoverFull ? <Html5Audio src={staticFile(voiceoverFull.src)} /> : null}
       {scenes.map((scene) =>
         scene.voiceover ? (
@@ -85,6 +97,16 @@ export const GeneralTso: React.FC<GeneralTsoProps> = ({ showSafeZone }) => {
         ) : null,
       )}
       {music ? <Music src={music.src} /> : null}
+      {sfx.map((cue, i) => (
+        <Sequence key={i} from={cue.from} durationInFrames={cue.durationInFrames} name={`SFX · ${cue.src}`}>
+          <Html5Audio src={staticFile(cue.src)} volume={cue.volume} />
+        </Sequence>
+      ))}
+
+      {/* 6. Фінальна обробка: грейд → зерно → віньєтка */}
+      <Grade />
+      <Grain />
+      <Vignette />
 
       {showSafeZone ? <SafeZoneGuides /> : null}
     </AbsoluteFill>

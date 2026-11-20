@@ -1,6 +1,6 @@
 import React from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { COLORS } from "../theme";
+import { COLORS, SPRING } from "../theme";
 import { SUBTITLE_FONT } from "../fonts";
 import type { SubtitleChunk } from "../timeline";
 
@@ -13,7 +13,7 @@ export const KineticSubtitles: React.FC<{ chunks: SubtitleChunk[] }> = ({ chunks
   const chunk = chunks.find((c) => frame >= c.startFrame && frame < c.endFrame);
   if (!chunk) return null;
 
-  const enter = spring({ frame: frame - chunk.startFrame, fps, config: { damping: 14, stiffness: 240, mass: 0.5 } });
+  const enter = spring({ frame: frame - chunk.startFrame, fps, config: SPRING.smooth });
 
   return (
     <div style={{ display: "flex", justifyContent: "center" }}>
@@ -35,7 +35,7 @@ export const KineticSubtitles: React.FC<{ chunks: SubtitleChunk[] }> = ({ chunks
         }}
       >
         {chunk.words.map((word, i) => {
-          const pop = spring({ frame: frame - word.startFrame, fps, config: { damping: 11, stiffness: 260, mass: 0.5 } });
+          const pop = spring({ frame: frame - word.startFrame, fps, config: SPRING.bouncy });
           const active = frame >= word.startFrame && frame < word.endFrame;
           const spoken = frame >= word.startFrame;
           return (

@@ -1,3 +1,4 @@
+import { Easing } from "remotion";
 import script from "../scripts/general_tso_30s.json";
 
 export const FPS = script.meta.fps;
@@ -20,3 +21,20 @@ export const COLORS = {
   gold: "#FFC83D",
   white: "#FFFFFF",
 };
+
+// Криві руху. Лінійної інтерполяції в ролику немає: входи — easeOut, виходи — easeIn.
+export const EASE = {
+  out: Easing.bezier(0.16, 1, 0.3, 1),
+  inOut: Easing.bezier(0.83, 0, 0.17, 1),
+  in: Easing.bezier(0.7, 0, 0.84, 0),
+};
+
+// Пресети пружин: snappy — слова й плашки, smooth — великі блоки, bouncy — грайливі акценти.
+export const SPRING = {
+  snappy: { damping: 13, stiffness: 190, mass: 0.6 },
+  smooth: { damping: 14, stiffness: 240, mass: 0.5 },
+  bouncy: { damping: 11, stiffness: 220, mass: 0.6 },
+};
+
+// Вихід елемента: останні EXIT_FRAMES кадрів сцени, швидший за вхід.
+export const EXIT_FRAMES = 8;

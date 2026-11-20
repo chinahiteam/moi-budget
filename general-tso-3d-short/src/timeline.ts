@@ -7,7 +7,12 @@ type VideoOptions = { trim_start_sec: number; playback_rate: number | string; cl
 type RawShot = { id: string; start_sec: number; end_sec: number; description?: string; video_asset: string; video: VideoOptions };
 type RawScene = (typeof script.scenes)[number] & { shots?: RawShot[] };
 type SceneAssets = { video: MediaInfo | null; shots: Record<string, MediaInfo | null>; voiceover: MediaInfo | null };
-type Manifest = { voiceoverFull: MediaInfo | null; music: MediaInfo | null; scenes: Record<string, SceneAssets> };
+type Manifest = {
+  voiceoverFull: MediaInfo | null;
+  music: MediaInfo | null;
+  sfx: Record<string, MediaInfo | null>;
+  scenes: Record<string, SceneAssets>;
+};
 
 export type Shot = {
   id: string;
@@ -148,3 +153,38 @@ export const scenes: Scene[] = (script.scenes as RawScene[]).map(buildScene);
 export const voiceoverFull = manifest.voiceoverFull;
 export const music = manifest.music;
 export const musicVolume = script.meta.music.volume;
+
+// ── Звукові ефекти ───────────────────────────────────────────────────────────
+// Кожен ефект стартує на 2 кадри раніше за подію в кадрі: так звук сприймається синхронним.
+export type SfxCue = { src: string; from: number; durationInFrames?: number; volume: number };
+
+const sfxCues = (): SfxCue[] => {
+  const files = manifest.sfx ?? {};
+  const cues: SfxCue[] = [];
+  const push = (name: string, frame: number, volume: number, durationInFrames?: number) => {
+    const file = files[name];
+    if (file) cues.push({ src: file.src, from: Math.max(0, Math.round(frame) - 2), volume, durationInFrames });
+  };
+  const byId = Object.fromEntries(scenes.flatMap((scene) => scene.shots).map((shot) => [shot.id, shot]));
+
+  for (const scene of scenes) {
+    for (const shot of scene.shots) if (shot.from > 0) push("whoosh", shot.from, 0.45); // монтажні склейки
+    for (const chip of scene.chips) push("pop", chip.atFrame, 0.3); // плашки інгредієнтів
+  }
+  // Звуки дії прив'язані до анімації 3D-планів (src/three/Shots.tsx) і вимикаються, якщо план замінено відеокліпом.
+  const at = (id: string, frame: number) => (byId[id] && !byId[id].media ? byId[id].from + frame : null);
+  const cue = (name: string, id: string, frame: number, volume: number, duration?: number) => {
+    const f = at(id, frame);
+    if (f !== null) push(name, f, volume, duration);
+  };
+  cue("sizzle", "scene_01", 0, 0.16, 90);
+  cue("flare", "scene_01", 22, 0.5);
+  for (const hit of [8, 19, 30, 41]) cue("chop", "scene_02a", hit, 0.7); // удари тесака
+  cue("sizzle", "scene_03", 4, 0.3, 150);
+  cue("sizzle", "scene_04", 6, 0.2, 232);
+  cue("flare", "scene_04", 170, 0.4);
+  cue("flare", "scene_04", 200, 0.6);
+  cue("ding", "scene_05", 132, 0.4); // фінальна усмішка, 29.4 с
+  return cues;
+};
+export const sfx: SfxCue[] = sfxCues();

@@ -1,6 +1,6 @@
 import React from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
-import { COLORS } from "../theme";
+import { COLORS, SPRING } from "../theme";
 import { SUBTITLE_FONT } from "../fonts";
 import type { Scene } from "../timeline";
 
@@ -12,7 +12,7 @@ export const IngredientChips: React.FC<{ scene: Scene }> = ({ scene }) => {
   return (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignContent: "flex-start" }}>
       {scene.chips.map((chip) => {
-        const pop = spring({ frame: frame - (chip.atFrame - scene.from), fps, config: { damping: 11, stiffness: 220, mass: 0.6 } });
+        const pop = spring({ frame: frame - (chip.atFrame - scene.from), fps, config: SPRING.bouncy });
         return (
           <div
             key={chip.text}

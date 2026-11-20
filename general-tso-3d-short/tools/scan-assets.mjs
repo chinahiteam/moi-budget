@@ -58,6 +58,7 @@ const manifest = {
   generatedAt: new Date().toISOString(),
   voiceoverFull: find("audio/voiceover", AUDIO_EXT),
   music: find("audio/music", AUDIO_EXT),
+  sfx: Object.fromEntries(["whoosh", "pop", "chop", "sizzle", "flare", "ding"].map((name) => [name, find(`sfx/${name}`, AUDIO_EXT)])),
   scenes: {},
 };
 
@@ -76,7 +77,7 @@ for (const scene of script.scenes) {
     ? `${sceneVideo.src} (${sceneVideo.durationSec} с)`
     : shotList.length && shotsFound
       ? `плани ${shotsFound}/${shotList.length}`
-      : "— заглушка";
+      : "3D-сцена з коду";
   rows.push({ сцена: scene.id, слот: `${slot} с`, відео: videoState, озвучка: voiceover ? `${voiceover.src} (${voiceover.durationSec} с)` : "—" });
 
   for (const v of [sceneVideo, ...Object.values(shots)]) {
@@ -108,6 +109,8 @@ mkdirSync(dirname(outFile), { recursive: true });
 writeFileSync(outFile, JSON.stringify(manifest, null, 2) + "\n");
 
 console.table(rows);
-console.log(`Повна доріжка озвучки: ${manifest.voiceoverFull ? manifest.voiceoverFull.src : "—"} · Музика: ${manifest.music ? manifest.music.src : "—"}`);
+console.log(
+  `Повна доріжка озвучки: ${manifest.voiceoverFull ? manifest.voiceoverFull.src : "—"} · Музика: ${manifest.music ? manifest.music.src : "—"} · Ефекти: ${Object.values(manifest.sfx).filter(Boolean).length}/6`,
+);
 for (const w of warnings) console.warn(`⚠ ${w}`);
 console.log("✓ src/generated/assets.json");
