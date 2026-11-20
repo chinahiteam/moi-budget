@@ -3,6 +3,7 @@ import { Chef } from "./Chef";
 import { Kitchen, PrepTable, STATION, SqueezeBottle, TABLE_TOP } from "./Kitchen";
 import { C, M } from "./materials";
 import { Bowl, CLEAVER_GRIP, Cleaver, Flames, LOOK, Piece, Plate, Puffs, SKIMMER_GRIP, Skimmer, Stream, Tray, WOK, WOK_GRIP, Wok, mixLook } from "./Props";
+import { Post } from "./Post";
 import { Cam, KitchenLights } from "./Stage";
 import { type V3, clamp, easeIn, lerp, lerp3, ramp, rnd, rndRange, span } from "./util";
 
@@ -58,6 +59,7 @@ export const Shot01: React.FC<ShotProps> = ({ f }) => {
   return (
     <>
       <Cam position={cam} look={target} fov={lerp(34, 40, push)} />
+      <Post focus={lerp3([0, 1, 0.3], [0, 1.38, 0.3], push)} blur={lerp(0.5, 1, push)} bloom={1.2} />
       <KitchenLights target={[0, 1, 0.4]} flame={1.1 + jerk * 1.6 + 0.2 * Math.sin(f * 1.3)} flameAt={[0, WOK_Y + 0.25, STATION.z]} />
       <Kitchen />
       <Flames position={BURNER} frame={f} power={1.1 + jerk * 0.5} flare={Math.sin(span(f, 22, 62) * Math.PI) * 0.9} />
@@ -112,6 +114,7 @@ export const Shot02a: React.FC<ShotProps> = ({ f }) => {
   return (
     <>
       <Cam position={[0, lerp(2.75, 2.58, ramp(f, 0, 60)), PREP_Z + 0.02]} look={[0, TABLE_TOP, PREP_Z + 0.02]} up={[0, 0, 1]} fov={30} />
+      <Post focus={[0, BOARD_TOP, PREP_Z]} blur={0.5} />
       <KitchenLights target={[0, 0.9, 0.5]} />
       {/* Вид зверху: стеля, витяжка і повітропровід приховані, щоб не затуляти камеру */}
       <Kitchen station={false} ceiling={false} />
@@ -168,6 +171,7 @@ export const Shot02b: React.FC<ShotProps> = ({ f }) => {
   return (
     <>
       <Cam position={[0.32, lerp(1.82, 1.74, push), lerp(1.7, 1.56, push)]} look={[0, 0.94, 0.46]} fov={30} />
+      <Post focus={[0, 1.0, PREP_Z]} />
       <KitchenLights target={[0, 0.95, 0.5]} />
       <Kitchen station={false} />
       <PrepTable />
@@ -230,6 +234,7 @@ export const Shot02c: React.FC<ShotProps> = ({ f }) => {
   return (
     <>
       <Cam position={lerp3([-0.3, 1.74, 1.74], [-0.3, 1.5, 2.12], look)} look={lerp3([0, 0.95, 0.5], [0, 1.365, 0.1], look)} fov={30} />
+      <Post focus={lerp3([0, TABLE_TOP + 0.04, PREP_Z], [0, 1.42, 0.2], look)} />
       <KitchenLights target={[0, 0.95, 0.5]} />
       <Kitchen station={false} />
       <PrepTable />
@@ -309,6 +314,7 @@ export const Shot03: React.FC<ShotProps> = ({ f }) => {
   return (
     <>
       <Cam position={cam} look={target} fov={lerp(30, 34, reveal)} />
+      <Post focus={lerp3([0, surface, STATION.z], [0, 1.42, 0.25], reveal)} blur={lerp(1.3, 1, reveal)} bloom={1.2} />
       <KitchenLights target={[0, 1, 0.4]} flame={0.9} flameAt={[0, WOK_Y + 0.02, STATION.z + 0.25]} />
       <Kitchen />
       <Flames position={BURNER} frame={f} power={0.75} />
@@ -410,6 +416,7 @@ export const Shot04: React.FC<ShotProps> = ({ f }) => {
   return (
     <>
       <Cam position={cam} look={target} fov={40} />
+      <Post focus={[0, 1.22, 0.42]} bloom={1.4} />
       <KitchenLights target={[0, 1, 0.4]} flame={1.2 + clamp(jerk) * 2.2 + 0.25 * Math.sin(f * 1.1)} flameAt={[0, WOK_Y + 0.3, STATION.z - 0.1]} />
       <Kitchen />
       <Flames position={BURNER} frame={f} power={1.15 + clamp(jerk) * 0.5} flare={Math.sin(span(f, 200, 236) * Math.PI) * 1.0 + Math.sin(span(f, 170, 188) * Math.PI) * 0.45} />
@@ -530,6 +537,7 @@ export const Shot05: React.FC<ShotProps> = ({ f }) => {
   return (
     <>
       <Cam position={cam} look={target} fov={lerp(30, 32, pull)} />
+      <Post focus={lerp3([0, 1.2, 0.4], [0, 1.4, 0.22], pull)} blur={lerp(1.3, 1, pull)} />
       <KitchenLights target={[0, 1.1, 0.3]} />
       <Kitchen station={false} />
       <Plate position={[plate[0], plate[1] + breathe, plate[2]]}>

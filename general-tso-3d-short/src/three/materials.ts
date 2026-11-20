@@ -23,9 +23,9 @@ export const C = {
   raw: "#eaa79b",
   marinated: "#8f4f2c",
   starch: "#f4ecdd",
-  fried: "#c9801f",
-  glaze: "#682410",
-  oil: "#d68f1c",
+  fried: "#a8691a",
+  glaze: "#55200c",
+  oil: "#c98216",
   soy: "#2a140b",
   scallion: "#5fa83b",
   sesame: "#f5ecd2",
@@ -105,6 +105,52 @@ const puffTexture = () => {
   return new THREE.CanvasTexture(canvas);
 };
 
+// Язик полум'я: м'яка крапля, яскрава біля основи і прозора до кінчика.
+const flameTexture = () => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 128;
+  canvas.height = 256;
+  const ctx = canvas.getContext("2d")!;
+  ctx.filter = "blur(7px)";
+  const g = ctx.createLinearGradient(0, 256, 0, 0);
+  g.addColorStop(0, "rgba(255,255,255,1)");
+  g.addColorStop(0.22, "rgba(255,236,170,0.95)");
+  g.addColorStop(0.55, "rgba(255,150,60,0.6)");
+  g.addColorStop(1, "rgba(255,70,20,0)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(64, 14);
+  ctx.bezierCurveTo(84, 90, 112, 150, 106, 200);
+  ctx.bezierCurveTo(102, 236, 82, 246, 64, 246);
+  ctx.bezierCurveTo(46, 246, 26, 236, 22, 200);
+  ctx.bezierCurveTo(16, 150, 44, 90, 64, 14);
+  ctx.fill();
+  return new THREE.CanvasTexture(canvas);
+};
+
+// Рельєф хрусткої скоринки: дрібний плямистий шум для bump-карти.
+const crustTexture = () => {
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = 256;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#808080";
+  ctx.fillRect(0, 0, 256, 256);
+  let seed = 31;
+  const next = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 1400; i++) {
+    const r = 2 + next() * 7;
+    const light = next() > 0.5;
+    ctx.fillStyle = light ? `rgba(255,255,255,${0.12 + next() * 0.22})` : `rgba(0,0,0,${0.12 + next() * 0.22})`;
+    ctx.beginPath();
+    ctx.arc(next() * 256, next() * 256, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(3, 2);
+  return texture;
+};
+
 let cache: ReturnType<typeof build> | null = null;
 
 const build = () => ({
@@ -112,14 +158,16 @@ const build = () => ({
   apron: cloth(C.apron),
   cap: cloth(C.cap),
   seam: std(C.seam, 0.8),
-  skin: std(C.skin, 0.52, 0, { emissive: new THREE.Color("#7a2c14"), emissiveIntensity: 0.22 }),
-  skinLine: std("#a9714f", 0.7),
+  skin: new THREE.MeshPhysicalMaterial({ color: C.skin, roughness: 0.5, clearcoat: 0.12, clearcoatRoughness: 0.5, sheen: 0.4, sheenColor: new THREE.Color("#ffb08a"), emissive: new THREE.Color("#7a2c14"), emissiveIntensity: 0.16 }),
+  // Виліплена голова: колір (шкіра + рум'янець) записаний у вершинах.
+  skinSculpt: new THREE.MeshPhysicalMaterial({ color: "#ffffff", vertexColors: true, roughness: 0.5, clearcoat: 0.12, clearcoatRoughness: 0.5, sheen: 0.4, sheenColor: new THREE.Color("#ffb08a"), emissive: new THREE.Color("#7a2c14"), emissiveIntensity: 0.16 }),
+  skinLine: std("#a8734f", 0.7),
   lip: std(C.lip, 0.5),
   mouth: std(C.mouth, 0.6),
   teeth: std("#fbf7ee", 0.3),
   eyeWhite: std("#f6f1e8", 0.25),
   iris: std(C.eye, 0.15),
-  brow: std("#231a15", 0.8),
+  brow: std("#2b211c", 0.8),
   hair: std("#ffffff", 0.85, 0, { map: hairTexture() }),
   snap: std("#c9c9cc", 0.3, 1),
   clog: std(C.clog, 0.6),
@@ -138,6 +186,8 @@ const build = () => ({
   plastic: std("#e9e2c8", 0.35, 0, { transparent: true, opacity: 0.85 }),
   led: new THREE.MeshBasicMaterial({ color: "#fff1cf" }),
   puff: puffTexture(),
+  flame: flameTexture(),
+  crust: crustTexture(),
 });
 
 export const M = () => (cache ??= build());

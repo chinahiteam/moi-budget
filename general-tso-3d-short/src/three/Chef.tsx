@@ -1,5 +1,6 @@
 import React from "react";
 import * as THREE from "three";
+import { APRON, apronGeometry, faceZ, headGeometry, onSkirt, torsoGeometry } from "./ChefSculpt";
 import { M } from "./materials";
 import { type V3, between, lerp, solveElbow, span } from "./util";
 
@@ -55,16 +56,16 @@ const Ball: React.FC<{ at: V3; r: number; material: THREE.Material; scale?: V3 }
 const Eye: React.FC<{ side: 1 | -1; open: number; smile: number }> = ({ side, open, smile }) => {
   const m = M();
   // В усмішці щоки підтискають очі знизу — вони звужуються у теплі півмісяці.
-  const o = Math.max(0.06, open * lerp(1, 0.5, smile));
+  const o = Math.max(0.06, open * lerp(1, 0.34, smile));
   const arc = Math.PI * 0.74;
   return (
-    <group position={[side * 0.056, 0.004, 0.139]} rotation={[0, side * 0.3, 0]}>
+    <group position={[side * 0.056, 0.004, faceZ(0.056, 0.004) - 0.0075]} rotation={[0, side * 0.3, 0]}>
       <group scale={[1, o, 1]}>
         <mesh material={m.eyeWhite} scale={[1.38, 0.8, 0.45]}>
-          <sphereGeometry args={[0.021, 20, 14]} />
+          <sphereGeometry args={[0.0235, 20, 14]} />
         </mesh>
         <mesh material={m.iris} position={[0, -0.001, 0.0072]} scale={[1, 1, 0.5]}>
-          <sphereGeometry args={[0.0128, 18, 12]} />
+          <sphereGeometry args={[0.0142, 18, 12]} />
         </mesh>
       </group>
       {o > 0.25 ? (
@@ -76,11 +77,11 @@ const Eye: React.FC<{ side: 1 | -1; open: number; smile: number }> = ({ side, op
       {/* Верхня повіка: мигдалеподібний контур; коли око заплющене — дужка-півмісяць */}
       <mesh
         material={m.brow}
-        position={[0, lerp(-0.024, -0.0105, o), 0.0085]}
+        position={[0, lerp(-0.027, -0.0118, o), 0.0085]}
         rotation={[0, 0, Math.PI / 2 - arc / 2]}
         scale={[1.2, 1, 1]}
       >
-        <torusGeometry args={[0.0265, 0.0022, 6, 20, arc]} />
+        <torusGeometry args={[0.0295, 0.0022, 6, 20, arc]} />
       </mesh>
     </group>
   );
@@ -89,13 +90,13 @@ const Eye: React.FC<{ side: 1 | -1; open: number; smile: number }> = ({ side, op
 // «Гусячі лапки» — три промінчики від зовнішнього кутика ока; в усмішці стають виразнішими.
 const CrowsFeet: React.FC<{ side: 1 | -1; smile: number }> = ({ side, smile }) => {
   const m = M();
-  const thick = lerp(0.75, 1.7, smile);
+  const thick = lerp(0.7, 1.5, smile);
   return (
-    <group position={[side * 0.1, 0.004, 0.118]} rotation={[0, side * 0.72, 0]}>
-      {[0.5, 0.06, -0.4].map((angle, i) => (
+    <group position={[side * 0.097, 0.003, faceZ(0.097, 0.003) - 0.001]} rotation={[0, side * 0.7, 0]}>
+      {[0.42, 0.04, -0.36].map((angle, i) => (
         <group key={i} rotation={[0, 0, side * angle]}>
-          <mesh material={m.skinLine} position={[side * 0.015, 0, 0.0035]} scale={[1, thick, 1]}>
-            <boxGeometry args={[0.019, 0.0022, 0.003]} />
+          <mesh material={m.skinLine} position={[side * 0.011, 0, 0.002]} rotation={[0, 0, Math.PI / 2]} scale={[thick, 1, 0.5]}>
+            <capsuleGeometry args={[0.0009, 0.011 - i * 0.0015, 3, 6]} />
           </mesh>
         </group>
       ))}
@@ -103,29 +104,48 @@ const CrowsFeet: React.FC<{ side: 1 | -1; smile: number }> = ({ side, smile }) =
   );
 };
 
+const MOUTH_Y = -0.078;
+// Вигинає плоску деталь рота по кривизні обличчя, щоб вона лежала на поверхні, а не «висіла» наклейкою.
+const conform = (geometry: THREE.BufferGeometry) => {
+  const pos = geometry.attributes.position;
+  const z0 = faceZ(0, MOUTH_Y);
+  for (let i = 0; i < pos.count; i++) pos.setZ(i, pos.getZ(i) + faceZ(Math.abs(pos.getX(i)), MOUTH_Y) - z0);
+  pos.needsUpdate = true;
+  return geometry;
+};
+let mouthParts: { cavity: THREE.BufferGeometry; teeth: THREE.BufferGeometry; lip: THREE.BufferGeometry } | null = null;
+const mouthGeometry = () =>
+  (mouthParts ??= {
+    cavity: conform(new THREE.CircleGeometry(0.041, 40, Math.PI, Math.PI)),
+    teeth: conform(new THREE.CircleGeometry(0.0375, 40, Math.PI, Math.PI)),
+    lip: conform(new THREE.PlaneGeometry(0.086, 0.0042, 24, 1)),
+  });
+
 const Mouth: React.FC<{ smile: number }> = ({ smile }) => {
   const m = M();
   const open = span(smile, 0.5, 1);
   const arc = lerp(0.85, 1.75, smile);
+  const parts = mouthGeometry();
+  const z = faceZ(0, MOUTH_Y);
+  // Нахил рота за схилом обличчя: нижня губа трохи далі від камери, ніж верхня.
+  const slope = Math.atan((faceZ(0, MOUTH_Y + 0.02) - faceZ(0, MOUTH_Y - 0.02)) / 0.04);
+  // Закрита усмішка: дужка з коротких сегментів, що лягає на поверхню.
+  const smileLine = Array.from({ length: 13 }).map((_, i) => {
+    const a = -Math.PI / 2 - arc / 2 + (arc * i) / 12;
+    const x = Math.cos(a) * 0.05;
+    return [x, 0.03 + Math.sin(a) * 0.05, faceZ(Math.abs(x), MOUTH_Y) - z + 0.001] as V3;
+  });
   return (
-    <group position={[0, -0.076, 0.1535]} rotation={[0.26, 0, 0]}>
-      {open < 0.35 ? (
-        <mesh material={m.lip} position={[0, 0.03, 0]} rotation={[0, 0, -Math.PI / 2 - arc / 2]}>
-          <torusGeometry args={[0.05, 0.0034, 6, 20, arc]} />
-        </mesh>
-      ) : null}
+    <group position={[0, MOUTH_Y, z + 0.0008]} rotation={[slope, 0, 0]}>
+      {open < 0.35
+        ? smileLine.slice(1).map((p, i) => <Limb key={i} from={smileLine[i]} to={p} r1={0.003} r2={0.003} material={m.lip} />)
+        : null}
       {open > 0 ? (
         <group position={[0, 0.004, 0]}>
           {/* Відкрита усмішка: темна порожнина рота і верхній ряд зубів */}
-          <mesh material={m.mouth} scale={[1, 0.08 + open * 0.56, 1]}>
-            <circleGeometry args={[0.041, 24, Math.PI, Math.PI]} />
-          </mesh>
-          <mesh material={m.teeth} position={[0, 0, 0.0012]} scale={[1, 0.04 + open * 0.26, 1]}>
-            <circleGeometry args={[0.0375, 24, Math.PI, Math.PI]} />
-          </mesh>
-          <mesh material={m.lip} position={[0, 0.0012, 0.001]}>
-            <boxGeometry args={[0.084, 0.0038, 0.003]} />
-          </mesh>
+          <mesh geometry={parts.cavity} material={m.mouth} scale={[1, 0.08 + open * 0.56, 1]} />
+          <mesh geometry={parts.teeth} material={m.teeth} position={[0, 0, 0.0012]} scale={[1, 0.04 + open * 0.26, 1]} />
+          <mesh geometry={parts.lip} material={m.lip} position={[0, 0.0012, 0.0016]} />
         </group>
       ) : null}
     </group>
@@ -136,42 +156,20 @@ const Head: React.FC<{ pose: ChefPose }> = ({ pose }) => {
   const m = M();
   const smile = pose.smile ?? 0.15;
   const brow = pose.browRaise ?? 0;
-  const cheek = lerp(0.92, 1.16, smile);
   return (
-    <group position={[0, HEAD_Y, 0]} rotation={[pose.headPitch ?? 0, pose.headYaw ?? 0, pose.headRoll ?? 0]} >
-      {/* Череп і м'який округлий овал обличчя з повними щоками */}
-      <Ball at={[0, 0, 0]} r={0.158} material={m.skin} scale={[1, 1.04, 1]} />
-      <Ball at={[0, -0.052, 0.012]} r={0.138} material={m.skin} scale={[1.1, 0.9, 1.02]} />
+    <group position={[0, HEAD_Y, 0]} rotation={[pose.headPitch ?? 0, pose.headYaw ?? 0, pose.headRoll ?? 0]}>
+      {/* Голова виліплена єдиною гладкою формою: округлий овал, повні щоки, ніс, вуха, носогубні складки */}
+      <mesh geometry={headGeometry()} material={m.skinSculpt} castShadow receiveShadow />
       {[1, -1].map((s) => (
         <React.Fragment key={s}>
-          <Ball at={[s * 0.157, -0.008, -0.005]} r={0.034} material={m.skin} scale={[0.45, 1, 0.75]} />
-          <mesh position={[s * 0.074, -0.05 + smile * 0.012, 0.098]} scale={[cheek, cheek * 0.85, cheek * 0.8]}>
-            <sphereGeometry args={[0.042, 20, 14]} />
-            <meshStandardMaterial color="#c88a64" roughness={0.52} emissive="#7a2c14" emissiveIntensity={0.24} />
-          </mesh>
           <Eye side={s as 1 | -1} open={(s === 1 ? pose.eyeL : pose.eyeR) ?? 1} smile={smile} />
           <CrowsFeet side={s as 1 | -1} smile={smile} />
           {/* Брови: природні темні, середньої густоти */}
-          <mesh material={m.brow} position={[s * 0.058, 0.043 + brow * 0.012, 0.1445]} rotation={[0, s * 0.3, Math.PI / 2 - s * 0.1]}>
-            <capsuleGeometry args={[0.0032, 0.04, 4, 8]} />
+          <mesh material={m.brow} position={[s * 0.058, 0.046 + brow * 0.012, faceZ(0.058, 0.046) + 0.0012]} rotation={[0, s * 0.3, Math.PI / 2 - s * 0.1]}>
+            <capsuleGeometry args={[0.0028, 0.04, 4, 8]} />
           </mesh>
-          {/* Носогубні складки: тонкі м'які лінії від крил носа до кутиків рота */}
-          {(() => {
-            const r = lerp(0.0011, 0.002, smile);
-            const top: V3 = [s * 0.031, -0.047, 0.1495];
-            const mid: V3 = [s * lerp(0.045, 0.051, smile), -0.068, 0.1475];
-            const low: V3 = [s * lerp(0.049, 0.057, smile), lerp(-0.084, -0.083, smile), 0.143];
-            return (
-              <>
-                <Limb from={top} to={mid} r1={r} r2={r} material={m.skinLine} />
-                <Limb from={mid} to={low} r1={r} r2={r * 0.7} material={m.skinLine} />
-              </>
-            );
-          })()}
-          <Ball at={[s * 0.02, -0.037, 0.149]} r={0.012} material={m.skin} />
         </React.Fragment>
       ))}
-      <Ball at={[0, -0.028, 0.154]} r={0.024} material={m.skin} scale={[1.15, 0.85, 1]} />
       <Mouth smile={smile} />
 
       {/* Дуже коротке волосся «сіль із перцем» на скронях і потилиці */}
@@ -297,8 +295,6 @@ export const Chef: React.FC<{ pose?: ChefPose }> = ({ pose = {} }) => {
     const y = p[1] - HIP_Y;
     return [p[0], HIP_Y + y * Math.cos(lean) - p[2] * Math.sin(lean), y * Math.sin(lean) + p[2] * Math.cos(lean)];
   };
-  const front = { thetaStart: -0.62, thetaLength: 1.24 };
-  const wrap = { thetaStart: -1.85, thetaLength: 3.7 };
 
   return (
     <group position={pose.position} rotation={[0, pose.rotationY ?? 0, 0]}>
@@ -309,52 +305,35 @@ export const Chef: React.FC<{ pose?: ChefPose }> = ({ pose = {} }) => {
           <Clog side={s as 1 | -1} />
         </React.Fragment>
       ))}
-      <Ball at={[0, 0.75, 0]} r={0.212} material={m.jacket} scale={[1, 0.5, 0.76]} />
 
-      {/* Спідниця фартуха: нижче колін, шов на талії, біла бирка на лівому стегні персонажа */}
-      <mesh material={m.apron} position={[0, 0.585, 0]} scale={[1, 1, 0.8]} castShadow>
-        <cylinderGeometry args={[0.224, 0.264, 0.56, 36, 1, true, wrap.thetaStart, wrap.thetaLength]} />
-      </mesh>
-      <mesh material={m.seam} position={[0, 0.862, 0]} scale={[1, 1, 0.8]}>
-        <cylinderGeometry args={[0.2262, 0.2262, 0.011, 36, 1, true, wrap.thetaStart, wrap.thetaLength]} />
-      </mesh>
-      <group position={[0.166, 0.836, 0.127]} rotation={[0, 0.8, 0]}>
-        <mesh material={m.white}>
+      {/* Низ фартуха і біла ткана бирка на лівому стегні персонажа рухаються разом зі стегнами */}
+      <group position={onSkirt(0.8, APRON.waist - 0.032)} rotation={[0, 0.8, 0]}>
+        <mesh material={m.white} position={[0, 0, 0.003]}>
           <boxGeometry args={[0.036, 0.013, 0.004]} />
         </mesh>
-        <mesh material={m.soleRed} position={[0, 0, 0.0012]}>
+        <mesh material={m.soleRed} position={[0, 0, 0.0045]}>
           <boxGeometry args={[0.016, 0.004, 0.003]} />
         </mesh>
       </group>
 
       <group position={[0, HIP_Y, 0]} rotation={[lean, 0, 0]}>
         <group position={[0, -HIP_Y, 0]}>
-          {/* Кітель: кремезний корпус, округлі плечі */}
-          <mesh material={m.jacket} position={[0, 1.0, 0]} scale={[1, 1, 0.74]} castShadow>
-            <cylinderGeometry args={[0.196, 0.216, 0.5, 28]} />
-          </mesh>
-          <Ball at={[0, 1.245, 0]} r={0.196} material={m.jacket} scale={[1.2, 0.36, 0.76]} />
-          <Ball at={[0, 0.96, 0.02]} r={0.2} material={m.jacket} scale={[1, 0.9, 0.64]} />
+          {/* Кітель: кремезний корпус, виліплений однією формою */}
+          <mesh geometry={torsoGeometry()} material={m.jacket} castShadow receiveShadow />
+          {/* Фартух із нагрудником: облягає тулуб, шов на талії, довжина нижче колін */}
+          <mesh geometry={apronGeometry()} material={m.apron} castShadow receiveShadow />
 
-          {/* Комір-стійка (мандарин), трохи розкритий спереду, і шия */}
-          <Limb from={[0, 1.26, 0]} to={[0, 1.37, 0.005]} r1={0.062} r2={0.058} material={m.skin} />
-          <mesh material={m.jacket} position={[0, 1.292, 0]} rotation={[0, 0, 0]}>
-            <cylinderGeometry args={[0.07, 0.076, 0.052, 28, 1, true, 0.24, Math.PI * 2 - 0.48]} />
+          {/* Комір-стійка (мандарин), трохи розкритий спереду */}
+          <mesh material={m.jacket} position={[0, 1.292, 0]}>
+            <cylinderGeometry args={[0.07, 0.078, 0.052, 28, 1, true, 0.24, Math.PI * 2 - 0.48]} />
           </mesh>
           {/* Асиметрична пола кітеля і дві металеві кнопки */}
-          <Limb from={[0.012, 1.268, 0.139]} to={[0.108, 1.15, 0.124]} r1={0.0035} r2={0.0035} material={m.seam} />
-          <Ball at={[0.004, 1.236, 0.146]} r={0.0095} material={m.snap} />
-          <Ball at={[0.092, 1.208, 0.132]} r={0.0095} material={m.snap} />
-
-          {/* Нагрудник фартуха з шийною бретелею */}
-          <mesh material={m.apron} position={[0, 1.015, 0.004]} scale={[1, 1, 0.76]} castShadow>
-            <cylinderGeometry args={[0.204, 0.218, 0.31, 24, 1, true, front.thetaStart, front.thetaLength]} />
-          </mesh>
-          <mesh material={m.seam} position={[0, 1.168, 0.004]} scale={[1, 1, 0.76]}>
-            <cylinderGeometry args={[0.2046, 0.2046, 0.007, 24, 1, true, front.thetaStart, front.thetaLength]} />
-          </mesh>
+          <Limb from={[0.012, 1.262, 0.118]} to={[0.118, 1.176, 0.128]} r1={0.0032} r2={0.0032} material={m.seam} />
+          <Ball at={[0.004, 1.228, 0.139]} r={0.0095} material={m.snap} />
+          <Ball at={[0.094, 1.214, 0.133]} r={0.0095} material={m.snap} />
+          {/* Шийна бретеля фартуха */}
           {[1, -1].map((s) => (
-            <Limb key={s} from={[s * 0.116, 1.166, 0.128]} to={[s * 0.066, 1.305, 0.03]} r1={0.011} r2={0.011} material={m.apron} flatten={0.45} />
+            <Limb key={s} from={[s * 0.112, APRON.top - 0.004, 0.142]} to={[s * 0.066, 1.3, 0.03]} r1={0.011} r2={0.011} material={m.apron} flatten={0.45} />
           ))}
 
           <Head pose={pose} />

@@ -22,9 +22,10 @@ export const Scene3D: React.FC<{ shots: Shot[] }> = ({ shots }) => {
       <ThreeCanvas
         width={width}
         height={height}
-        shadows
+        shadows={{ type: THREE.PCFSoftShadowMap }}
         dpr={1}
-        gl={{ antialias: true, toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.05 }}
+        flat
+        gl={{ antialias: false, powerPreference: "high-performance" }}
       >
         <color attach="background" args={["#17110d"]} />
         <fog attach="fog" args={["#17110d", 7, 16]} />

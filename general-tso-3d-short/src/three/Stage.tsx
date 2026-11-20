@@ -7,9 +7,11 @@ import type { V3 } from "./util";
 // Камера: положення, точка погляду й кут задаються декларативно на кожен кадр.
 // Матрицю оновлюємо прямо під час рендеру React — до того, як Remotion попросить R3F намалювати кадр.
 export const Cam: React.FC<{ position: V3; look: V3; fov: number; up?: V3 }> = ({ position, look, fov, up = [0, 1, 0] }) => {
-  const set = useThree((s) => s.set);
   const size = useThree((s) => s.size);
-  const camera = useMemo(() => new THREE.PerspectiveCamera(35, 9 / 16, 0.05, 60), []);
+  // Одна камера на весь ролик (стандартна камера канвасу) — на неї спирається постобробка.
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera;
+  camera.near = 0.08;
+  camera.far = 40;
   camera.position.set(...position);
   camera.up.set(...up);
   camera.lookAt(...look);
@@ -17,9 +19,6 @@ export const Cam: React.FC<{ position: V3; look: V3; fov: number; up?: V3 }> = (
   camera.aspect = size.width / size.height;
   camera.updateProjectionMatrix();
   camera.updateMatrixWorld();
-  useLayoutEffect(() => {
-    set({ camera });
-  }, [camera, set]);
   return null;
 };
 
@@ -63,7 +62,7 @@ export const KitchenLights: React.FC<{ target?: V3; flame?: number; flameAt?: V3
       <primitive object={key} />
       <directionalLight color="#bcd4ff" intensity={1.5} position={[2.2, 2.4, -2.6]} />
       <directionalLight color="#ffc890" intensity={0.7} position={[2.6, 1.4, 2.4]} />
-      <pointLight color="#ffa861" intensity={flame * 1.5} distance={2.6} decay={1.8} position={flameAt} />
+      <pointLight color="#ffa861" intensity={flame * 0.9} distance={2.4} decay={1.8} position={flameAt} />
     </>
   );
 };

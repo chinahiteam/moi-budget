@@ -61,44 +61,39 @@ export const Wok: React.FC<{
 // Точка хвату ручки вока в локальних координатах вока.
 export const WOK_GRIP: V3 = [0, WOK.depth + 0.03, -WOK.radius - 0.2];
 
-// ── Полум'я пальника: язики вогню з адитивним змішуванням, рух — від номера кадру ──
+// ── Полум'я пальника: м'які язики вогню (спрайти з адитивним змішуванням), рух — від номера кадру ──
 export const Flames: React.FC<{ position: V3; frame: number; power: number; radius?: number; flare?: number }> = ({
   position,
   frame,
   power,
-  radius = 0.19,
+  radius = 0.185,
   flare = 0,
 }) => {
-  const count = 16;
   const m = M();
+  const count = 18;
   return (
     <group position={position}>
-      {/* М'яке тепле сяйво пальника */}
-      <sprite position={[0, 0.04, 0]} scale={[0.75 * power, 0.42 * power, 1]}>
-        <spriteMaterial map={m.puff} color="#ff7a1a" transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} />
+      {/* Тепле сяйво пальника */}
+      <sprite position={[0, 0.04, 0]} scale={[0.62 * power, 0.3 * power, 1]}>
+        <spriteMaterial map={m.puff} color="#ff6a14" transparent opacity={0.2} blending={THREE.AdditiveBlending} depthWrite={false} />
       </sprite>
       {Array.from({ length: count }).map((_, i) => {
-        const a = (i / count) * Math.PI * 2;
-        const flick = 0.75 + 0.25 * Math.sin(frame * 0.9 + i * 2.1) + 0.18 * Math.sin(frame * 1.7 + i * 0.7);
+        const a = (i / count) * Math.PI * 2 + 0.17;
+        const flick = 0.72 + 0.28 * Math.sin(frame * 0.83 + i * 2.1) * Math.sin(frame * 0.37 + i * 1.3) + 0.14 * Math.sin(frame * 1.9 + i * 0.7);
         // Спалах: язики з дальнього від камери боку злітають над краєм вока.
-        const lift = flare * (0.55 + 0.45 * Math.sin(i * 1.3 + frame * 0.6)) * (Math.cos(a) < 0.3 ? 1 : 0.35);
-        const h = (0.055 + 0.035 * flick) * power + lift * 0.34;
-        const r = radius * (1 + lift * 0.1);
+        const lift = flare * (0.5 + 0.5 * Math.sin(i * 1.3 + frame * 0.55)) * (Math.cos(a) < 0.35 ? 1 : 0.25);
+        const h = (0.085 + 0.04 * flick) * power + lift * 0.26;
+        const w = (0.05 + 0.014 * flick) * (1 + lift * 0.5);
+        const sway = Math.sin(frame * 0.5 + i * 1.7) * 0.012;
         return (
-          <group key={i} position={[Math.sin(a) * r, 0, Math.cos(a) * r]} rotation={[Math.cos(a) * 0.35, 0, -Math.sin(a) * 0.35]}>
-            <mesh position={[0, h / 2, 0]} scale={[1, h, 1]}>
-              <coneGeometry args={[0.026, 1, 8, 1, true]} />
-              <meshBasicMaterial color="#ff6a14" transparent opacity={0.42} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
-            </mesh>
-            <mesh position={[0, h * 0.32, 0]} scale={[1, h * 0.62, 1]}>
-              <coneGeometry args={[0.014, 1, 8, 1, true]} />
-              <meshBasicMaterial color="#ffc24a" transparent opacity={0.45} blending={THREE.AdditiveBlending} depthWrite={false} side={THREE.DoubleSide} />
-            </mesh>
-            <mesh position={[0, 0.012, 0]} scale={[1, 0.03, 1]}>
-              <coneGeometry args={[0.03, 1, 8, 1, true]} />
-              <meshBasicMaterial color="#5aa0ff" transparent opacity={0.5} blending={THREE.AdditiveBlending} depthWrite={false} />
-            </mesh>
-          </group>
+          <React.Fragment key={i}>
+            <sprite position={[Math.sin(a) * radius + sway, 0, Math.cos(a) * radius]} center={[0.5, 0.06]} scale={[w, h, 1]}>
+              <spriteMaterial map={m.flame} color="#ff8a2c" transparent opacity={0.55} blending={THREE.AdditiveBlending} depthWrite={false} />
+            </sprite>
+            <sprite position={[Math.sin(a) * radius * 0.96, 0.004, Math.cos(a) * radius * 0.96]} center={[0.5, 0.06]} scale={[w * 0.55, 0.035, 1]}>
+              <spriteMaterial map={m.flame} color="#4f8dff" transparent opacity={0.6} blending={THREE.AdditiveBlending} depthWrite={false} />
+            </sprite>
+          </React.Fragment>
         );
       })}
     </group>
@@ -143,8 +138,8 @@ export const LOOK = {
   raw: { color: C.raw, roughness: 0.45, gloss: 0.3 },
   marinated: { color: C.marinated, roughness: 0.4, gloss: 0.5 },
   starch: { color: C.starch, roughness: 0.95, gloss: 0 },
-  fried: { color: C.fried, roughness: 0.75, gloss: 0.1 },
-  glazed: { color: C.glaze, roughness: 0.24, gloss: 1 },
+  fried: { color: C.fried, roughness: 0.82, gloss: 0.06 },
+  glazed: { color: C.glaze, roughness: 0.34, gloss: 0.9 },
 } satisfies Record<string, PieceLook>;
 
 export const mixLook = (a: PieceLook, b: PieceLook, t: number): PieceLook => ({
@@ -153,20 +148,21 @@ export const mixLook = (a: PieceLook, b: PieceLook, t: number): PieceLook => ({
   gloss: lerp(a.gloss, b.gloss, clamp(t)),
 });
 
-// Нерівний «наггетс»: ікосфера з детермінованим зміщенням вершин — три варіанти форми.
+// Нерівний шматочок курки: ікосфера з детермінованим зміщенням вершин (великі горби + дрібна «крихта») — три варіанти форми.
 const nuggets: THREE.BufferGeometry[] = [];
 const nugget = (variant: number) => {
   if (!nuggets[variant]) {
-    const g = mergeVertices(new THREE.IcosahedronGeometry(1, 2));
+    const g = mergeVertices(new THREE.IcosahedronGeometry(1, 4));
     const pos = g.attributes.position;
     const v = new THREE.Vector3();
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
       const k = variant * 3.1;
       const bump =
-        0.16 * Math.sin(v.x * 3.1 + k) * Math.cos(v.y * 2.7 + k * 0.7) +
-        0.12 * Math.sin(v.z * 4.3 + k * 1.3) * Math.sin(v.y * 3.7) +
-        0.07 * Math.sin((v.x + v.z) * 7.1 + k);
+        0.2 * Math.sin(v.x * 2.6 + k) * Math.cos(v.y * 2.3 + k * 0.7) +
+        0.14 * Math.sin(v.z * 3.7 + k * 1.3) * Math.sin(v.y * 3.1 + k) +
+        0.07 * Math.sin((v.x + v.z) * 6.3 + k) * Math.cos(v.y * 5.7) +
+        0.035 * Math.sin(v.x * 13 + k) * Math.sin(v.y * 12 + 1.7) * Math.sin(v.z * 11);
       v.multiplyScalar(1 + bump);
       pos.setXYZ(i, v.x, v.y, v.z);
     }
@@ -198,7 +194,14 @@ export const Piece: React.FC<{ at: V3; look: PieceLook; seed: number | string; s
       castShadow
     >
       {cube ? <boxGeometry args={[1.5, 1.5, 1.5]} /> : null}
-      <meshPhysicalMaterial color={look.color} roughness={look.roughness} clearcoat={look.gloss} clearcoatRoughness={0.14} flatShading={!cube && look.gloss < 0.5} />
+      <meshPhysicalMaterial
+        color={look.color}
+        roughness={look.roughness}
+        clearcoat={look.gloss}
+        clearcoatRoughness={0.22}
+        bumpMap={cube ? null : M().crust}
+        bumpScale={cube ? 0 : 1.6}
+      />
     </mesh>
   );
 };
